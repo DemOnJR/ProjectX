@@ -93,6 +93,18 @@ variable "argocd_chart_version" {
   default     = "7.7.15"
 }
 
+variable "install_vault_secrets_operator" {
+  description = "Whether Terraform should install HashiCorp Vault Secrets Operator into the cluster."
+  type        = bool
+  default     = true
+}
+
+variable "vault_secrets_operator_chart_version" {
+  description = "HashiCorp Vault Secrets Operator Helm chart version."
+  type        = string
+  default     = "0.9.1"
+}
+
 variable "gitops_repo_url" {
   description = "GitOps repository URL used by Argo CD."
   type        = string
