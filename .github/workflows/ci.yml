@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   build-and-deploy:
+    name: Build · Push · Deploy · Verify
     runs-on: ubuntu-latest
 
     env:
@@ -21,53 +22,96 @@ jobs:
       GITOPS_VALUES: apps/projectx-api/values.yaml
 
     steps:
-      - name: Checkout
+      # ── 1. Source ────────────────────────────────────────────────────────────
+      - name: "📥  Checkout"
         uses: actions/checkout@v4
 
-      # Keyless auth — no GCP keys stored anywhere.
-      # WIF_PROVIDER and GCP_SERVICE_ACCOUNT come from Terraform outputs,
-      # stored as GitHub Actions variables (not secrets).
-      - name: Authenticate to Google Cloud
+      # ── 2. GCP auth (keyless — no long-lived keys anywhere) ──────────────────
+      - name: "🔑  Authenticate to Google Cloud"
+        id: auth
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
-      - name: Configure Docker for Artifact Registry
+      - name: "🐳  Configure Docker → Artifact Registry"
         run: gcloud auth configure-docker ${{ secrets.REGISTRY }} --quiet
 
-      - name: Build and push image
+      # ── 3. Build ─────────────────────────────────────────────────────────────
+      - name: "🏗️   Build image"
+        id: build
         run: |
-          SHORT_SHA="${GITHUB_SHA::8}"
-          FULL_IMAGE="${{ secrets.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/${REPO}/${IMAGE}"
+          TAG="${GITHUB_SHA::8}"
+          IMAGE_REF="${{ secrets.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/${REPO}/${IMAGE}"
+          echo "tag=${TAG}"             >> "$GITHUB_OUTPUT"
+          echo "image_ref=${IMAGE_REF}" >> "$GITHUB_OUTPUT"
 
           docker build \
-            -t "${FULL_IMAGE}:${SHORT_SHA}" \
-            -t "${FULL_IMAGE}:latest" \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -t "${IMAGE_REF}:${TAG}" \
+            -t "${IMAGE_REF}:latest" \
             ./app
 
-          docker push "${FULL_IMAGE}:${SHORT_SHA}"
-          docker push "${FULL_IMAGE}:latest"
+      # ── 4. Publish ───────────────────────────────────────────────────────────
+      - name: "🚀  Push to Artifact Registry"
+        run: |
+          docker push "${{ steps.build.outputs.image_ref }}:${{ steps.build.outputs.tag }}"
+          docker push "${{ steps.build.outputs.image_ref }}:latest"
 
-          # Pass the tag to the next step
-          echo "IMAGE_TAG=${SHORT_SHA}" >> $GITHUB_ENV
-
-      # Updates image.tag in the GitOps repo so ArgoCD deploys the new image.
-      # GITOPS_PAT is a GitHub Personal Access Token (repo scope) stored as a secret.
-      - name: Update image tag in GitOps repo
+      # ── 5. GitOps ────────────────────────────────────────────────────────────
+      - name: "📝  Update GitOps manifest"
         env:
-          GH_TOKEN: ${{ secrets.GITOPS_PAT }}
+          GH_TOKEN:  ${{ secrets.GITOPS_PAT }}
+          IMAGE_TAG: ${{ steps.build.outputs.tag }}
         run: |
           git clone "https://x-access-token:${GH_TOKEN}@github.com/${GITOPS_REPO}.git" gitops
           cd gitops
-
-          # Update only the image.tag field using yq
           yq e ".image.tag = \"${IMAGE_TAG}\"" -i "${GITOPS_VALUES}"
-
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add "${GITOPS_VALUES}"
-
-          # Only commit if there is an actual change
           git diff --staged --quiet || \
-            git commit -m "ci: deploy projectx-api ${IMAGE_TAG}" && git push
+            git commit -m "ci: deploy ${IMAGE}:${IMAGE_TAG}" && git push
+
+      # ── 6. Health check (polls until ArgoCD rolls out the new pods) ──────────
+      - name: "🩺  Health check"
+        id: healthcheck
+        run: |
+          echo "Waiting for ArgoCD to sync and pods to roll out..."
+          for i in $(seq 1 12); do
+            HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 5 "${{ secrets.APP_URL }}/healthz" 2>/dev/null || echo "000")
+            echo "  Attempt ${i}/12 → HTTP ${HTTP}"
+            if [ "${HTTP}" = "200" ]; then
+              BODY=$(curl -s --max-time 5 "${{ secrets.APP_URL }}/healthz")
+              echo "  ✅ ${BODY}"
+              echo "status=healthy" >> "$GITHUB_OUTPUT"
+              break
+            fi
+            [ "${i}" -lt 12 ] && sleep 15
+          done
+          if ! grep -q "status=healthy" "$GITHUB_OUTPUT" 2>/dev/null; then
+            echo "status=degraded" >> "$GITHUB_OUTPUT"
+            echo "  ❌ Health check timed out after 3 minutes"
+            exit 1
+          fi
+
+      # ── 7. Summary card (always runs, even on failure) ───────────────────────
+      - name: "📋  Deployment summary"
+        if: always()
+        run: |
+          HEALTH="${{ steps.healthcheck.outputs.status }}"
+          ICON=$([[ "${HEALTH}" == "healthy" ]] && echo "✅ Healthy" || echo "❌ ${HEALTH:-not reached}")
+          TAG="${{ steps.build.outputs.tag }}"
+          {
+            echo "## 🚀 Deployment — \`${TAG:-pending}\`"
+            echo ""
+            echo "| | |"
+            echo "|:---|:---|"
+            echo "| **Status**    | ${ICON} |"
+            echo "| **Image tag** | \`${TAG:-n/a}\` |"
+            echo "| **Commit**    | [\`${GITHUB_SHA::8}\`](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}) |"
+            echo "| **Actor**     | @${GITHUB_ACTOR} |"
+            echo "| **App**       | ${{ secrets.APP_URL }} |"
+          } >> "$GITHUB_STEP_SUMMARY"

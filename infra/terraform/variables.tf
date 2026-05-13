@@ -148,6 +148,12 @@ variable "github_token" {
   default     = ""
 }
 
+variable "app_url" {
+  description = "Public URL of the deployed app (e.g. https://projectx.pbcv.dev). Used as APP_URL Actions secret for post-deploy health checks."
+  type        = string
+  default     = ""
+}
+
 variable "github_gitops_pat" {
   description = "GitHub PAT (repo scope on ProjectX-ArgoCD) injected as the GITOPS_PAT Actions secret so CI can push image tags. Also written to Vault for central secret management. Leave empty to skip."
   type        = string

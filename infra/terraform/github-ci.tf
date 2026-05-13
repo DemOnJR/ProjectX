@@ -56,6 +56,14 @@ resource "github_actions_secret" "registry" {
   plaintext_value = "${var.gcp_region}-docker.pkg.dev"
 }
 
+resource "github_actions_secret" "app_url" {
+  count = local.github_ci_enabled && var.app_url != "" ? 1 : 0
+
+  repository      = local.github_ci_repo
+  secret_name     = "APP_URL"
+  plaintext_value = var.app_url
+}
+
 resource "github_actions_secret" "gitops_pat" {
   count = local.github_ci_enabled && var.github_gitops_pat != "" ? 1 : 0
 
