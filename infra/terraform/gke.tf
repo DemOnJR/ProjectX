@@ -32,8 +32,9 @@ module "gke" {
       initial_node_count = var.node_min_count
       min_count          = var.node_min_count
       max_count          = var.node_max_count
-      disk_size_gb       = 50
-      disk_type          = "pd-balanced"
+      disk_size_gb       = 30
+      disk_type          = "pd-standard"
+      spot               = true
     }
   ]
 

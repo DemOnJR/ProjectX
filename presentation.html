@@ -147,7 +147,7 @@
       <div><h3 style="margin:0;color:#4285f4">GKE — Google Kubernetes Engine</h3><span class="badge" style="background:rgba(66,133,244,.12);color:#4285f4;border-color:rgba(66,133,244,.3)">Managed Kubernetes</span></div>
     </div>
     <p><strong>Why it was invented:</strong> Running Kubernetes yourself means managing the control plane (the API server, scheduler, etcd database) — upgrades, HA, backups, certificates. That is a full-time job. Managed Kubernetes services (GKE, EKS, AKS) take over the control plane completely. You only manage the worker nodes (and in Autopilot mode, not even those). GKE (2014, Google's own product built on the same team that wrote Kubernetes) is considered the most mature of the managed offerings.</p>
-    <p style="margin:0"><strong>In this project:</strong> GKE hosts the cluster in <code>europe-west3</code> across two zones. Terraform provisions it via the <code>terraform-google-modules/kubernetes-engine</code> module. It handles node upgrades, auto-repair, and auto-scaling transparently. The node pool uses <code>e2-standard-2</code> machines and scales from 1 to 4 nodes per zone.</p>
+    <p style="margin:0"><strong>In this project:</strong> GKE hosts the cluster in <code>europe-west3</code> across two zones. Terraform provisions it via the <code>terraform-google-modules/kubernetes-engine</code> module. It handles node upgrades, auto-repair, and auto-scaling transparently. The node pool uses <code>e2-medium</code> spot instances (1 vCPU / 4 GB RAM) and scales from 1 to 4 nodes per zone. Spot instances cost ~85 % less than on-demand; GKE replaces them automatically if Google reclaims them.</p>
   </div>
 
   <!-- ── Terraform ── -->
@@ -351,7 +351,7 @@
 
               <!-- GKE Cluster -->
               <rect x="455" y="232" width="890" height="460" rx="8" fill="rgba(88,166,255,0.04)" stroke="#58a6ff" stroke-width="1.2"/>
-              <text x="473" y="250" fill="#58a6ff" font-size="11" font-family="sans-serif" font-weight="600">GKE Cluster — projectx-gke  ·  europe-west3  ·  e2-standard-2  ·  autoscaling 1–4/zone</text>
+              <text x="473" y="250" fill="#58a6ff" font-size="11" font-family="sans-serif" font-weight="600">GKE Cluster — projectx-gke  ·  europe-west3  ·  e2-medium spot  ·  autoscaling 1–4/zone</text>
 
               <!-- ns: argocd -->
               <rect x="470" y="260" width="215" height="400" rx="7" fill="#21262d" stroke="#bc8cff" stroke-width="1.2"/>

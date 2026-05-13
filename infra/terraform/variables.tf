@@ -66,7 +66,7 @@ variable "node_pool_name" {
 variable "node_machine_type" {
   description = "Machine type for GKE worker nodes."
   type        = string
-  default     = "e2-standard-2"
+  default     = "e2-medium"
 }
 
 variable "node_min_count" {
