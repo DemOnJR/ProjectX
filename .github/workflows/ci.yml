@@ -20,8 +20,11 @@ jobs:
     name: "📦 Build"
     runs-on: ubuntu-latest
     outputs:
-      tag:       ${{ steps.tag.outputs.tag }}
-      image_ref: ${{ steps.tag.outputs.image_ref }}
+      tag: ${{ steps.tag.outputs.tag }}
+
+    env:
+      REPO:  projectx
+      IMAGE: projectx-api
 
     steps:
       - name: "📥 Checkout"
@@ -29,30 +32,23 @@ jobs:
 
       - name: "🏷️  Set image tag"
         id: tag
-        env:
-          REPO:  projectx
-          IMAGE: projectx-api
-        run: |
-          TAG="${GITHUB_SHA::8}"
-          IMAGE_REF="${{ secrets.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/${REPO}/${IMAGE}"
-          echo "tag=${TAG}"             >> "$GITHUB_OUTPUT"
-          echo "image_ref=${IMAGE_REF}" >> "$GITHUB_OUTPUT"
+        run: echo "tag=${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
 
       - name: "🏗️  Build image"
         run: |
+          IMAGE_REF="${{ secrets.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/${REPO}/${IMAGE}"
           docker build \
             --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
             --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            -t "${{ steps.tag.outputs.image_ref }}:${{ steps.tag.outputs.tag }}" \
-            -t "${{ steps.tag.outputs.image_ref }}:latest" \
+            -t "${IMAGE_REF}:${{ steps.tag.outputs.tag }}" \
+            -t "${IMAGE_REF}:latest" \
             ./app
 
       - name: "💾 Export image to artifact"
         run: |
-          docker save \
-            "${{ steps.tag.outputs.image_ref }}:${{ steps.tag.outputs.tag }}" \
-            "${{ steps.tag.outputs.image_ref }}:latest" \
-          | gzip > image.tar.gz
+          IMAGE_REF="${{ secrets.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/${REPO}/${IMAGE}"
+          docker save "${IMAGE_REF}:${{ steps.tag.outputs.tag }}" "${IMAGE_REF}:latest" \
+            | gzip > image.tar.gz
 
       - name: "⬆️  Upload image artifact"
         uses: actions/upload-artifact@v4
@@ -90,9 +86,13 @@ jobs:
         run: gcloud auth configure-docker ${{ secrets.REGISTRY }} --quiet
 
       - name: "🚀 Push to Artifact Registry"
+        env:
+          REPO:  projectx
+          IMAGE: projectx-api
         run: |
-          docker push "${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.tag }}"
-          docker push "${{ needs.build.outputs.image_ref }}:latest"
+          IMAGE_REF="${{ secrets.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/${REPO}/${IMAGE}"
+          docker push "${IMAGE_REF}:${{ needs.build.outputs.tag }}"
+          docker push "${IMAGE_REF}:latest"
 
   # ────────────────────────────────────────────────────────────────────────────
   # 3 · DEPLOY
