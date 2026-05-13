@@ -74,10 +74,14 @@
     .diagram-controls{position:absolute;top:.5rem;right:.6rem;z-index:10;display:flex;gap:.35rem;align-items:center}
     .diagram-controls button{background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:4px;width:26px;height:26px;cursor:pointer;font-size:.95rem;line-height:1;display:flex;align-items:center;justify-content:center}
     .diagram-controls button:hover{background:var(--border)}
+    .diagram-controls button[data-action="fullscreen"]{width:28px;font-size:.85rem}
     .diagram-hint{color:var(--muted);font-size:.72rem;margin-right:.3rem}
     .canvas-container{height:500px;overflow:hidden;cursor:grab;user-select:none;-webkit-user-select:none}
     .canvas-container.dragging{cursor:grabbing}
     .canvas-container svg{display:block}
+    /* fullscreen overlay */
+    .diagram-wrap.is-fullscreen{position:fixed;inset:0;z-index:9999;border-radius:0;border:none;height:100dvh!important;display:flex;flex-direction:column}
+    .diagram-wrap.is-fullscreen .canvas-container{flex:1;height:auto!important}
   </style>
 </head>
 <body>
@@ -278,6 +282,7 @@
           <button data-action="zoomin">+</button>
           <button data-action="zoomout">−</button>
           <button data-action="reset">⊙</button>
+          <button data-action="fullscreen" title="Fullscreen">⛶</button>
         </div>
         <div class="canvas-container" id="cc-arch">
           <svg id="svg-arch" viewBox="0 0 1580 820" xmlns="http://www.w3.org/2000/svg" style="width:1580px;height:820px">
@@ -513,6 +518,7 @@
           <button data-action="zoomin">+</button>
           <button data-action="zoomout">−</button>
           <button data-action="reset">⊙</button>
+          <button data-action="fullscreen" title="Fullscreen">⛶</button>
         </div>
         <div class="canvas-container" id="cc-ci">
           <svg id="svg-ci" viewBox="0 0 1500 560" xmlns="http://www.w3.org/2000/svg" style="width:1500px;height:560px">
@@ -648,6 +654,7 @@
           <button data-action="zoomin">+</button>
           <button data-action="zoomout">−</button>
           <button data-action="reset">⊙</button>
+          <button data-action="fullscreen" title="Fullscreen">⛶</button>
         </div>
         <div class="canvas-container" id="cc-vault">
           <svg id="svg-vault" viewBox="0 0 1400 680" xmlns="http://www.w3.org/2000/svg" style="width:1400px;height:680px">
@@ -1221,16 +1228,32 @@ function initCanvas(containerId, svgId) {
     }
   }, {passive: false});
 
-  // Controls (+, -, reset)
-  cc.closest('.diagram-wrap').querySelectorAll('button[data-action]').forEach(btn => {
+  // Controls (+, -, reset, fullscreen)
+  const wrap = cc.closest('.diagram-wrap');
+  const fsBtn = wrap.querySelector('button[data-action="fullscreen"]');
+  wrap.querySelectorAll('button[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       const rect = cc.getBoundingClientRect();
       const cx = rect.width / 2, cy = rect.height / 2;
-      if (btn.dataset.action === 'zoomin')  { tx = cx - (cx - tx) * 1.25; ty = cy - (cy - ty) * 1.25; sc = Math.min(6, sc * 1.25); }
-      if (btn.dataset.action === 'zoomout') { tx = cx - (cx - tx) * 0.8;  ty = cy - (cy - ty) * 0.8;  sc = Math.max(0.15, sc * 0.8); }
-      if (btn.dataset.action === 'reset')   { sc = 0.62; tx = 0; ty = 0; }
-      apply();
+      if (btn.dataset.action === 'zoomin')  { tx = cx - (cx - tx) * 1.25; ty = cy - (cy - ty) * 1.25; sc = Math.min(6, sc * 1.25); apply(); return; }
+      if (btn.dataset.action === 'zoomout') { tx = cx - (cx - tx) * 0.8;  ty = cy - (cy - ty) * 0.8;  sc = Math.max(0.15, sc * 0.8); apply(); return; }
+      if (btn.dataset.action === 'reset')   { sc = 0.62; tx = 0; ty = 0; apply(); return; }
+      if (btn.dataset.action === 'fullscreen') {
+        if (!document.fullscreenElement) {
+          wrap.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen();
+        }
+      }
     });
+  });
+
+  document.addEventListener('fullscreenchange', () => {
+    const isFs = document.fullscreenElement === wrap;
+    wrap.classList.toggle('is-fullscreen', isFs);
+    if (fsBtn) fsBtn.textContent = isFs ? '✕' : '⛶';
+    // recalculate reset scale after resize
+    if (!isFs) { sc = 0.62; tx = 0; ty = 0; apply(); }
   });
 }
 
