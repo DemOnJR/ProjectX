@@ -15,7 +15,6 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      REGION:        europe-west3
       REPO:          projectx
       IMAGE:         projectx-api
       GITOPS_REPO:   DemOnJR/ProjectX-ArgoCD
