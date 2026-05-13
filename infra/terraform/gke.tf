@@ -13,12 +13,9 @@ module "gke" {
   ip_range_pods     = "${var.subnet_name}-pods"
   ip_range_services = "${var.subnet_name}-services"
 
-  deletion_protection = false
-
-  http_load_balancing        = true
-  horizontal_pod_autoscaling = true
-  network_policy             = true
-  remove_default_node_pool   = true
+  deletion_protection      = false
+  network_policy           = true
+  remove_default_node_pool = true
 
   master_authorized_networks = [
     {
@@ -37,10 +34,6 @@ module "gke" {
       max_count          = var.node_max_count
       disk_size_gb       = 50
       disk_type          = "pd-balanced"
-      auto_repair        = true
-      auto_upgrade       = true
-      preemptible        = false
-      spot               = false
     }
   ]
 
@@ -48,4 +41,11 @@ module "gke" {
     google_project_service.services,
     module.network
   ]
+}
+
+# Allows GKE nodes to pull images from Artifact Registry.
+resource "google_project_iam_member" "gke_node_ar_reader" {
+  project = var.gcp_project_id
+  role    = "roles/artifactregistry.reader"
+  member  = "serviceAccount:${module.gke.service_account}"
 }

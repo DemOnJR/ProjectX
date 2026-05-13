@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+
+permissions:
+  contents: read
+  id-token: write   # required for Workload Identity Federation
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      REGION:   europe-west3
+      REGISTRY: europe-west3-docker.pkg.dev
+      REPO:     projectx
+      IMAGE:    projectx-api
+      GITOPS_REPO: DemOnJR/ProjectX-ArgoCD
+      GITOPS_VALUES: apps/projectx-api/values.yaml
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Keyless auth — no GCP keys stored anywhere.
+      # WIF_PROVIDER and GCP_SERVICE_ACCOUNT come from Terraform outputs,
+      # stored as GitHub Actions variables (not secrets).
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+
+      - name: Build and push image
+        run: |
+          SHORT_SHA="${GITHUB_SHA::8}"
+          FULL_IMAGE="${REGISTRY}/${{ vars.GCP_PROJECT_ID }}/${REPO}/${IMAGE}"
+
+          docker build \
+            -t "${FULL_IMAGE}:${SHORT_SHA}" \
+            -t "${FULL_IMAGE}:latest" \
+            ./app
+
+          docker push "${FULL_IMAGE}:${SHORT_SHA}"
+          docker push "${FULL_IMAGE}:latest"
+
+          # Pass the tag to the next step
+          echo "IMAGE_TAG=${SHORT_SHA}" >> $GITHUB_ENV
+
+      # Updates image.tag in the GitOps repo so ArgoCD deploys the new image.
+      # GITOPS_PAT is a GitHub Personal Access Token (repo scope) stored as a secret.
+      - name: Update image tag in GitOps repo
+        env:
+          GH_TOKEN: ${{ secrets.GITOPS_PAT }}
+        run: |
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/${GITOPS_REPO}.git" gitops
+          cd gitops
+
+          # Update only the image.tag field using yq
+          yq e ".image.tag = \"${IMAGE_TAG}\"" -i "${GITOPS_VALUES}"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "${GITOPS_VALUES}"
+
+          # Only commit if there is an actual change
+          git diff --staged --quiet || \
+            git commit -m "ci: deploy projectx-api ${IMAGE_TAG}" && git push

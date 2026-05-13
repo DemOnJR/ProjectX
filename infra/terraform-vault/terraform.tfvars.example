@@ -1,0 +1,25 @@
+# ── Required ───────────────────────────────────────────────────────────────────
+# Must match the project ID used in infra/terraform/terraform.tfvars
+gcp_project_id = "YOUR_PROJECT_ID"
+
+# ── GKE cluster (change only if you changed the defaults in infra/terraform/) ──
+gcp_region   = "europe-west3"
+cluster_name = "projectx-gke"
+
+# ── Vault server ───────────────────────────────────────────────────────────────
+vault_address = "https://vault.pbcv.dev"
+
+# ── Vault KV paths (match values.yaml vault.cloudflareTunnelSecret settings) ──
+vault_kv_mount          = "kv"
+vault_kv_projectx_path  = "projectx"
+vault_kv_argocd_path    = "argocd"
+
+# ── Secrets ────────────────────────────────────────────────────────────────────
+# Paste your Cloudflare tunnel tokens here.
+# Terraform writes them to Vault automatically on apply.
+# Leave empty to skip writing (if the secret already exists in Vault).
+#
+# Get the tokens from: https://one.dash.cloudflare.com → Networks → Tunnels
+#
+# cloudflare_projectx_token = "eyJ..."   # → written to kv/projectx  (used by VSO for the API)
+# cloudflare_argocd_token   = "eyJ..."   # → written to kv/argocd    (used by ArgoCD tunnel)

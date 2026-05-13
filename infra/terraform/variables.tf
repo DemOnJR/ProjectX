@@ -134,3 +134,23 @@ variable "gitops_app_path" {
   type        = string
   default     = "apps/projectx-api"
 }
+
+variable "github_repo" {
+  description = "GitHub repository in owner/repo format (e.g. DemOnJR/ProjectX). Used to create the Workload Identity Federation binding for CI. Leave empty to skip."
+  type        = string
+  default     = ""
+}
+
+variable "argocd_tunnel_token" {
+  description = "Cloudflare tunnel token to expose Argo CD publicly. Leave empty to skip."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "projectx_tunnel_token" {
+  description = "Cloudflare tunnel token to expose the ProjectX API publicly. Leave empty to skip. Also set cloudflareTunnel.enabled=true in values.yaml."
+  type        = string
+  sensitive   = true
+  default     = ""
+}

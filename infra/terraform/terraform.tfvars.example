@@ -1,0 +1,28 @@
+# Required: your GCP project ID
+gcp_project_id = "YOUR_PROJECT_ID"
+
+# GitHub repo for CI (owner/repo) — creates Workload Identity Federation so GitHub
+# Actions can push to Artifact Registry without storing any GCP keys.
+github_repo = "YOUR_GITHUB_USERNAME/ProjectX"
+
+# Region and zones — change if needed
+gcp_region = "europe-west3"
+gcp_zones  = ["europe-west3-a", "europe-west3-b"]
+
+# Set to false if your GCP account cannot manage Service Usage (serviceusage.googleapis.com)
+manage_project_services = true
+
+# GitOps repository that Argo CD watches
+gitops_repo_url        = "https://github.com/YOUR_USERNAME/ProjectX-ArgoCD.git"
+gitops_target_revision = "main"
+gitops_app_path        = "apps/projectx-api"
+
+# Uncomment for private GitOps repositories
+# gitops_repo_username = "your-github-username"
+# gitops_repo_password = "ghp_your_personal_access_token"
+
+# Cloudflare tunnel tokens — get them from the Cloudflare Zero Trust dashboard.
+# Create two separate tunnels: one pointing to argocd-server:80, one to projectx-api:80.
+# Leave empty to skip tunnel deployment.
+# argocd_tunnel_token   = "eyJ..."
+# projectx_tunnel_token = "eyJ..."
