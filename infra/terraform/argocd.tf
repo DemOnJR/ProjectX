@@ -67,7 +67,7 @@ resource "kubernetes_deployment_v1" "argocd_cloudflared" {
       spec {
         container {
           name  = "cloudflared"
-          image = "cloudflare/cloudflared:2025.2.1"
+          image = "cloudflare/cloudflared:2025.11.1"
           args  = ["tunnel", "--no-autoupdate", "--metrics", "0.0.0.0:2000", "run", "--token", "$(TUNNEL_TOKEN)"]
 
           env {
