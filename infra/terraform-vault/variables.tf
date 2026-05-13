@@ -58,3 +58,10 @@ variable "cloudflare_argocd_token" {
   sensitive   = true
   default     = ""
 }
+
+variable "github_gitops_pat" {
+  description = "GitHub PAT (repo scope) for CI to push image tags to ProjectX-ArgoCD. Written to Vault at kv/github so it is centrally managed. Leave empty to skip."
+  type        = string
+  sensitive   = true
+  default     = ""
+}

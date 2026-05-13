@@ -141,6 +141,20 @@ variable "github_repo" {
   default     = ""
 }
 
+variable "github_token" {
+  description = "GitHub Personal Access Token (classic, repo scope) for the repository owner. Used by Terraform to set Actions variables and secrets on github_repo. Leave empty to skip."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "github_gitops_pat" {
+  description = "GitHub PAT (repo scope on ProjectX-ArgoCD) injected as the GITOPS_PAT Actions secret so CI can push image tags. Also written to Vault for central secret management. Leave empty to skip."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "argocd_tunnel_token" {
   description = "Cloudflare tunnel token to expose Argo CD publicly. Leave empty to skip."
   type        = string
