@@ -37,7 +37,7 @@
     pre{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:0.9rem 1.1rem;overflow-x:auto;margin:0.5rem 0 1rem;font-size:0.82rem;line-height:1.55}
     code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace}
     p code,li code{background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-size:0.84em}
-    .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:0.73rem;font-weight:600}
+    .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:0.73rem;font-weight:600;border:1px solid transparent}
     .bb{background:rgba(88,166,255,.15);color:var(--blue);border:1px solid rgba(88,166,255,.3)}
     .bg{background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.3)}
     .bo{background:rgba(240,136,62,.15);color:var(--orange);border:1px solid rgba(240,136,62,.3)}
@@ -84,6 +84,7 @@
 <nav>
   <span class="logo">⚡ ProjectX</span>
   <a href="#overview">Overview</a>
+  <a href="#tech">Technologies</a>
   <a href="#diagrams">Diagrams</a>
   <a href="#gcp-setup">GCP Setup</a>
   <a href="#deploy">Deploy</a>
@@ -108,6 +109,153 @@
     <div class="card"><div style="font-size:1.4rem;margin-bottom:.4rem">⚙️</div><h3>GitHub Actions CI</h3><p>Triggered on every push to <code>app/</code>. Builds image, pushes to Artifact Registry, updates image tag — zero manual steps.</p><span class="badge bg">Automated</span></div>
     <div class="card"><div style="font-size:1.4rem;margin-bottom:.4rem">🔐</div><h3>HashiCorp Vault</h3><p>Stores Cloudflare tunnel tokens. Vault Secrets Operator syncs them into the cluster automatically.</p><span class="badge by">Vault</span></div>
   </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ TECHNOLOGIES -->
+<section id="tech">
+  <h2>Technologies — What They Are &amp; What They Do Here</h2>
+  <p>A short explanation of each tool: why it was created, what problem it solves, and its specific role in this project.</p>
+
+  <!-- ── Docker ── -->
+  <div class="card" style="border-left:3px solid #2496ed;margin-bottom:1.2rem">
+    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.6rem">
+      <span style="font-size:1.6rem">🐳</span>
+      <div><h3 style="margin:0;color:#2496ed">Docker</h3><span class="badge" style="background:rgba(36,150,237,.12);color:#2496ed;border-color:rgba(36,150,237,.3)">Containerisation</span></div>
+    </div>
+    <p><strong>Why it was invented:</strong> Before containers, deploying an app meant installing the right version of Python (or Java, Node…) on every server, dealing with conflicting dependencies, and facing the classic "it works on my machine" problem. Docker (2013) packages the app <em>together with its entire runtime</em> — OS libraries, language runtime, dependencies — into a single portable image. That image runs identically everywhere: a developer's laptop, a CI runner, a cloud VM, or a Kubernetes pod.</p>
+    <p style="margin:0"><strong>In this project:</strong> The FastAPI app lives in <code>app/Dockerfile</code>. It starts from <code>python:3.12-slim</code>, installs <code>fastapi</code> + <code>uvicorn</code>, and copies <code>main.py</code>. CI builds this image and pushes it to Artifact Registry on every code change. GKE then pulls and runs it.</p>
+  </div>
+
+  <!-- ── Kubernetes ── -->
+  <div class="card" style="border-left:3px solid #326ce5;margin-bottom:1.2rem">
+    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.6rem">
+      <span style="font-size:1.6rem">☸️</span>
+      <div><h3 style="margin:0;color:#326ce5">Kubernetes (K8s)</h3><span class="badge" style="background:rgba(50,108,229,.12);color:#326ce5;border-color:rgba(50,108,229,.3)">Container Orchestration</span></div>
+    </div>
+    <p><strong>Why it was invented:</strong> Running one container on one machine is easy. Running hundreds of containers across tens of machines — keeping them healthy, restarting crashed ones, distributing traffic, scaling up on load and down to save money — is not. Google ran everything in containers internally for years using a system called Borg. Kubernetes (2014) is the open-source version of those ideas. It is a <em>cluster operating system</em>: you declare what you want ("run 3 replicas of this container") and Kubernetes makes it happen and keeps it that way.</p>
+    <p style="margin:0"><strong>In this project:</strong> Kubernetes runs on GKE and hosts all workloads. It manages the <code>projectx-api</code> Deployment (keeps 2 pods running, health-checks them via <code>/healthz</code>), the HPA (scales from 2 to 10 replicas based on CPU), the ClusterIP Service (internal load balancing), and the cloudflared tunnel pods. It also runs ArgoCD and the Vault Secrets Operator.</p>
+  </div>
+
+  <!-- ── GKE ── -->
+  <div class="card" style="border-left:3px solid #4285f4;margin-bottom:1.2rem">
+    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.6rem">
+      <span style="font-size:1.6rem">☁️</span>
+      <div><h3 style="margin:0;color:#4285f4">GKE — Google Kubernetes Engine</h3><span class="badge" style="background:rgba(66,133,244,.12);color:#4285f4;border-color:rgba(66,133,244,.3)">Managed Kubernetes</span></div>
+    </div>
+    <p><strong>Why it was invented:</strong> Running Kubernetes yourself means managing the control plane (the API server, scheduler, etcd database) — upgrades, HA, backups, certificates. That is a full-time job. Managed Kubernetes services (GKE, EKS, AKS) take over the control plane completely. You only manage the worker nodes (and in Autopilot mode, not even those). GKE (2014, Google's own product built on the same team that wrote Kubernetes) is considered the most mature of the managed offerings.</p>
+    <p style="margin:0"><strong>In this project:</strong> GKE hosts the cluster in <code>europe-west3</code> across two zones. Terraform provisions it via the <code>terraform-google-modules/kubernetes-engine</code> module. It handles node upgrades, auto-repair, and auto-scaling transparently. The node pool uses <code>e2-standard-2</code> machines and scales from 1 to 4 nodes per zone.</p>
+  </div>
+
+  <!-- ── Terraform ── -->
+  <div class="card" style="border-left:3px solid #7b42bc;margin-bottom:1.2rem">
+    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.6rem">
+      <span style="font-size:1.6rem">🏗️</span>
+      <div><h3 style="margin:0;color:#7b42bc">Terraform</h3><span class="badge" style="background:rgba(123,66,188,.12);color:#7b42bc;border-color:rgba(123,66,188,.3)">Infrastructure as Code</span></div>
+    </div>
+    <p><strong>Why it was invented:</strong> Clicking through cloud consoles to create infrastructure is slow, error-prone, and impossible to reproduce. HashiCorp created Terraform (2014) so infrastructure can be described in code (<code>.tf</code> files), version-controlled in Git, reviewed in pull requests, and applied repeatedly to get the same result every time. It also tracks what it created in a <em>state file</em>, so it knows exactly what to change or delete.</p>
+    <p style="margin:0"><strong>In this project:</strong> <code>infra/terraform/</code> provisions everything in GCP: the VPC, GKE cluster, Artifact Registry, IAM bindings, ArgoCD and VSO Helm releases, Cloudflare tunnel secrets, and the Workload Identity Federation pool for CI. <code>infra/terraform-vault/</code> configures the Kubernetes auth backend in Vault after the cluster exists. One <code>terraform apply</code> creates the entire stack from nothing.</p>
+  </div>
+
+  <!-- ── Helm ── -->
+  <div class="card" style="border-left:3px solid #277a9f;margin-bottom:1.2rem">
+    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.6rem">
+      <span style="font-size:1.6rem">⎈</span>
+      <div><h3 style="margin:0;color:#277a9f">Helm</h3><span class="badge" style="background:rgba(39,122,159,.12);color:#277a9f;border-color:rgba(39,122,159,.3)">Kubernetes Package Manager</span></div>
+    </div>
+    <p><strong>Why it was invented:</strong> A real Kubernetes app is not one YAML file — it is a Deployment, Service, ConfigMap, Ingress, HPA, ServiceAccount… all linked together. Copy-pasting and editing raw YAML for each environment (dev, staging, prod) is painful. Helm (2015) is the package manager for Kubernetes: it bundles all the YAML templates for an app into a <em>chart</em>, and you customise it by changing values in a single <code>values.yaml</code> file. It also tracks what was deployed and enables clean upgrades and rollbacks.</p>
+    <p style="margin:0"><strong>In this project:</strong> <code>ProjectX-ArgoCD/apps/projectx-api/</code> is a Helm chart. Templates render the Deployment, Service, HPA, Ingress, cloudflared Deployment, and Vault CRDs — all driven by <code>values.yaml</code>. ArgoCD, VSO, and the argocd-apps application set are also installed as Helm releases managed by Terraform.</p>
+  </div>
+
+  <!-- ── Artifact Registry ── -->
+  <div class="card" style="border-left:3px solid #f0883e;margin-bottom:1.2rem">
+    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.6rem">
+      <span style="font-size:1.6rem">📦</span>
+      <div><h3 style="margin:0;color:#f0883e">Google Artifact Registry</h3><span class="badge bo">Container Registry</span></div>
+    </div>
+    <p><strong>Why it was invented:</strong> Docker images need to be stored somewhere accessible to the cluster — a <em>registry</em>. Docker Hub is public. Private registries let you control who can push or pull. Google Artifact Registry (2021, successor to Container Registry) is a fully managed private registry inside GCP, with tight IAM integration, vulnerability scanning, and zero egress cost to GKE in the same region.</p>
+    <p style="margin:0"><strong>In this project:</strong> Stores the <code>projectx-api</code> Docker images at <code>europe-west3-docker.pkg.dev/gcp-projectx-496112/projectx/</code>. CI pushes images tagged with the git SHA (e.g. <code>:a1b2c3d4</code>). GKE nodes pull from it using the node service account which Terraform grants <code>roles/artifactregistry.reader</code>. The repository is destroyed cleanly by a Terraform destroy-time provisioner that empties all images first.</p>
+  </div>
+
+  <!-- ── GitHub Actions ── -->
+  <div class="card" style="border-left:3px solid #2dba4e;margin-bottom:1.2rem">
+    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.6rem">
+      <span style="font-size:1.6rem">⚙️</span>
+      <div><h3 style="margin:0;color:#2dba4e">GitHub Actions</h3><span class="badge bg">CI/CD</span></div>
+    </div>
+    <p><strong>Why it was invented:</strong> Every software team needs Continuous Integration: automatically run tests, build artifacts, and deploy when code changes — no manual steps. GitHub Actions (2019) is GitHub's built-in CI/CD system. Instead of managing a separate Jenkins server or paying for a standalone CI SaaS, workflows live in <code>.github/workflows/</code> right next to the code. Each workflow is triggered by Git events (push, PR, tag) and runs in disposable virtual machines.</p>
+    <p style="margin:0"><strong>In this project:</strong> <code>.github/workflows/ci.yml</code> triggers on every push to <code>main</code> that touches <code>app/**</code>. It authenticates to GCP via WIF (no stored keys), builds the Docker image, pushes it to Artifact Registry with a short-SHA tag, then clones <code>ProjectX-ArgoCD</code> and commits an updated <code>image.tag</code>. ArgoCD picks up that commit and deploys. Total time: ~3–5 minutes.</p>
+  </div>
+
+  <!-- ── WIF ── -->
+  <div class="card" style="border-left:3px solid #4285f4;margin-bottom:1.2rem">
+    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.6rem">
+      <span style="font-size:1.6rem">🔑</span>
+      <div><h3 style="margin:0;color:#4285f4">Workload Identity Federation (WIF)</h3><span class="badge bb">Keyless Auth</span></div>
+    </div>
+    <p><strong>Why it was invented:</strong> The classic way to let CI push to a cloud is to download a service account JSON key and store it as a CI secret. Keys are long-lived, can be leaked in logs, and are a pain to rotate. WIF (Google, 2021) lets an external identity — like a GitHub Actions OIDC token — be exchanged for a short-lived GCP token at job runtime. No key file is ever created. The token expires when the job ends.</p>
+    <p style="margin:0"><strong>In this project:</strong> Terraform creates a WIF pool (<code>github-actions</code>) with an attribute condition that only accepts tokens from <code>DemOnJR/ProjectX</code>. GitHub Actions exchanges its OIDC JWT for a GCP token that can impersonate the <code>projectx-ci</code> service account, which has <code>roles/artifactregistry.writer</code>. Nothing is stored as a secret — just three GitHub Actions variables that are not even sensitive.</p>
+  </div>
+
+  <!-- ── Argo CD ── -->
+  <div class="card" style="border-left:3px solid #ef7b4d;margin-bottom:1.2rem">
+    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.6rem">
+      <span style="font-size:1.6rem">🔄</span>
+      <div><h3 style="margin:0;color:#ef7b4d">Argo CD</h3><span class="badge" style="background:rgba(239,123,77,.12);color:#ef7b4d;border-color:rgba(239,123,77,.3)">GitOps Delivery</span></div>
+    </div>
+    <p><strong>Why it was invented:</strong> Traditionally, CI pipelines do both building <em>and</em> deploying: <code>kubectl apply</code> is called at the end of the pipeline. This means the cluster state is only known at deploy time and there is no single source of truth for "what is actually running". GitOps (coined by Weaveworks, 2017) flips this: a Git repository is the <em>desired state</em> of the cluster, and a controller running inside Kubernetes continuously reconciles the cluster to match it. Argo CD (2018, CNCF graduated) is the most popular GitOps controller. It watches a repo, detects drift, and syncs — automatically or on demand.</p>
+    <p style="margin:0"><strong>In this project:</strong> ArgoCD runs in the <code>argocd</code> namespace and watches <code>github.com/DemOnJR/ProjectX-ArgoCD</code>. When CI commits a new <code>image.tag</code>, ArgoCD detects the change within ~3 minutes and performs a rolling update of the <code>projectx-api</code> Deployment. It also has <code>prune: true</code> (removes deleted resources) and <code>selfHeal: true</code> (reverts manual <code>kubectl</code> changes).</p>
+  </div>
+
+  <!-- ── Cloudflare Tunnel ── -->
+  <div class="card" style="border-left:3px solid #f38020;margin-bottom:1.2rem">
+    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.6rem">
+      <span style="font-size:1.6rem">🌐</span>
+      <div><h3 style="margin:0;color:#f38020">Cloudflare Tunnel</h3><span class="badge bo">Secure Ingress</span></div>
+    </div>
+    <p><strong>Why it was invented:</strong> Exposing a service to the internet traditionally requires a public IP, an open port, a load balancer, TLS certificates, and DDoS protection — all of which cost money and require ongoing management. Cloudflare Tunnel (formerly Argo Tunnel, 2018) works the other way: a small daemon (<code>cloudflared</code>) runs <em>inside</em> your network and makes an outbound connection to Cloudflare's edge. Cloudflare proxies inbound HTTPS traffic through that connection to your service. No public IP, no open ports, TLS managed by Cloudflare, DDoS protection included.</p>
+    <p style="margin:0"><strong>In this project:</strong> Two tunnels expose services publicly. The ArgoCD tunnel (<code>argocd.pbcv.dev</code>) is managed by Terraform as a Deployment in the <code>argocd</code> namespace, forwarding to <code>argocd-server:80</code>. The API tunnel (<code>projectx.pbcv.dev</code>) is managed by the Helm chart in the <code>projectx</code> namespace, forwarding to <code>projectx-api:80</code>. Both use tokens stored either directly in Terraform or via Vault + VSO.</p>
+  </div>
+
+  <!-- ── HashiCorp Vault ── -->
+  <div class="card" style="border-left:3px solid #ffcf25;margin-bottom:1.2rem">
+    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.6rem">
+      <span style="font-size:1.6rem">🔐</span>
+      <div><h3 style="margin:0;color:#d29922">HashiCorp Vault</h3><span class="badge by">Secrets Management</span></div>
+    </div>
+    <p><strong>Why it was invented:</strong> Applications need secrets (passwords, API keys, tokens) to function. Storing them in environment variables, config files, or Git is insecure. HashiCorp Vault (2015) is a dedicated secret store: it encrypts secrets at rest, controls who can read what via policies, produces audit logs for every access, and can automatically rotate secrets. It also acts as a certificate authority and can generate short-lived database passwords on demand — so secrets are never long-lived.</p>
+    <p style="margin:0"><strong>In this project:</strong> Vault at <code>vault.pbcv.dev</code> stores the Cloudflare tunnel tokens (<code>kv/projectx</code>, <code>kv/argocd</code>). The Kubernetes auth backend (configured by <code>infra/terraform-vault/</code>) lets GKE pods prove their identity using their service account JWT. The Vault Secrets Operator reads the token from Vault and creates a <code>cloudflared-token</code> Kubernetes secret — refreshing it every hour without any human intervention or pod restart.</p>
+  </div>
+
+  <!-- ── Vault Secrets Operator ── -->
+  <div class="card" style="border-left:3px solid #d29922;margin-bottom:1.2rem">
+    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.6rem">
+      <span style="font-size:1.6rem">🤖</span>
+      <div><h3 style="margin:0;color:#d29922">Vault Secrets Operator (VSO)</h3><span class="badge by">Secret Sync</span></div>
+    </div>
+    <p><strong>Why it was invented:</strong> Vault is great, but apps running in Kubernetes still need secrets as Kubernetes Secrets or environment variables — they don't speak the Vault API natively. You could write a sidecar or an init container to fetch secrets on startup, but those are fragile and don't handle rotation. VSO (HashiCorp, 2023) is a Kubernetes operator: it watches <code>VaultStaticSecret</code> custom resources, authenticates with Vault on behalf of the workload, and keeps the corresponding Kubernetes Secret in sync automatically.</p>
+    <p style="margin:0"><strong>In this project:</strong> VSO is installed as a Helm release in <code>vault-secrets-operator-system</code>. The Helm chart deploys a <code>VaultStaticSecret</code> CR in the <code>projectx</code> namespace that maps <code>kv/data/projectx → cloudflared-token.token</code>. VSO creates and maintains that Kubernetes secret. When the token is rotated in Vault, VSO updates the secret within <code>refreshAfter</code> (1 hour) without restarting any pods.</p>
+  </div>
+
+  <!-- ── FastAPI ── -->
+  <div class="card" style="border-left:3px solid #009688;margin-bottom:1.2rem">
+    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.6rem">
+      <span style="font-size:1.6rem">🚀</span>
+      <div><h3 style="margin:0;color:#009688">FastAPI</h3><span class="badge" style="background:rgba(0,150,136,.12);color:#009688;border-color:rgba(0,150,136,.3)">Python Web Framework</span></div>
+    </div>
+    <p><strong>Why it was invented:</strong> Python web frameworks like Flask are simple and well-known, but they lack type safety, have no built-in async support, and require separate libraries for data validation and documentation. FastAPI (Sebastián Ramírez, 2018) is built on Python type hints and Pydantic: write a function with typed parameters, and you automatically get request validation, serialisation, and an interactive Swagger docs page at <code>/docs</code>. It uses ASGI and <code>async/await</code> natively, making it one of the fastest Python frameworks.</p>
+    <p style="margin:0"><strong>In this project:</strong> The app in <code>app/main.py</code> is a minimal FastAPI service with two endpoints: <code>GET /</code> returns a hello-world JSON message and <code>GET /healthz</code> returns <code>{"status":"ok"}</code>. The <code>/healthz</code> endpoint is used by Kubernetes readiness and liveness probes to know when a pod is ready to receive traffic and when to restart it. The app runs under <code>uvicorn</code> on port 8000 inside the container.</p>
+  </div>
+
+  <!-- ── HPA ── -->
+  <div class="card" style="border-left:3px solid #326ce5;margin-bottom:0">
+    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.6rem">
+      <span style="font-size:1.6rem">📈</span>
+      <div><h3 style="margin:0;color:#326ce5">Horizontal Pod Autoscaler (HPA)</h3><span class="badge bb">Auto-scaling</span></div>
+    </div>
+    <p><strong>Why it was invented:</strong> Traffic to an application is not constant. Scaling manually — logging in and changing a replica count — wastes either money (too many pods at night) or causes outages (too few during a traffic spike). Kubernetes HPA (built-in since v1.1) watches a metric (typically CPU or memory utilisation) and automatically adds or removes pods to hit a target. Combined with cluster autoscaler (which adds/removes nodes), the entire stack scales without human involvement.</p>
+    <p style="margin:0"><strong>In this project:</strong> The HPA in <code>templates/hpa.yaml</code> keeps CPU utilisation at 70%, scaling the <code>projectx-api</code> Deployment between 2 and 10 replicas. During low traffic, 2 pods run (one per zone for availability). Under load, Kubernetes adds more pods automatically. Minimum 2 replicas also ensures the app survives a single node or zone going down.</p>
+  </div>
+
 </section>
 
 <!-- ══════════════════════════════════════════════════════════ DIAGRAMS -->
