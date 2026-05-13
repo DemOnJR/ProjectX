@@ -88,6 +88,7 @@
 <nav>
   <span class="logo">⚡ ProjectX</span>
   <a href="#overview">Overview</a>
+  <a href="#checklist">Checklist</a>
   <a href="#tech">Technologies</a>
   <a href="#diagrams">Diagrams</a>
   <a href="#gcp-setup">GCP Setup</a>
@@ -112,6 +113,75 @@
     <div class="card"><div style="font-size:1.4rem;margin-bottom:.4rem">🔄</div><h3>ProjectX-ArgoCD</h3><p>GitOps repo — Helm chart for the app. Argo CD watches this and syncs every commit automatically.</p><span class="badge bp">Helm</span> <span class="badge bg">GitOps</span></div>
     <div class="card"><div style="font-size:1.4rem;margin-bottom:.4rem">⚙️</div><h3>GitHub Actions CI</h3><p>Triggered on every push to <code>app/</code>. Builds image, pushes to Artifact Registry, updates image tag — zero manual steps.</p><span class="badge bg">Automated</span></div>
     <div class="card"><div style="font-size:1.4rem;margin-bottom:.4rem">🔐</div><h3>HashiCorp Vault</h3><p>Stores Cloudflare tunnel tokens. Vault Secrets Operator syncs them into the cluster automatically.</p><span class="badge by">Vault</span></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ CHECKLIST -->
+<section id="checklist">
+  <h2>Manual Setup Checklist</h2>
+  <p>Everything below must be done <strong>once by hand</strong>. After that, all deployments are fully automated. Do them in this order.</p>
+
+  <!-- ── 1. GCP ── -->
+  <h3 style="margin-top:1.5rem">1 — Google Cloud (one-time, then Terraform handles everything)</h3>
+  <div class="card">
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Log in: <code>gcloud auth login &amp;&amp; gcloud auth application-default login</code></span></label>
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Create project &amp; link billing (see <a href="#gcp-setup">GCP Setup</a> section for exact commands)</span></label>
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Set <code>gcp_project_id</code> in <code>infra/terraform/terraform.tfvars</code></span></label>
+  </div>
+
+  <!-- ── 2. Cloudflare Tunnels ── -->
+  <h3 style="margin-top:1.5rem">2 — Cloudflare Tunnels</h3>
+  <div class="card">
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Go to <a href="https://one.dash.cloudflare.com" target="_blank">one.dash.cloudflare.com</a> → Networks → Tunnels → <strong>Create tunnel</strong> (type: Cloudflared)</span></label>
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span><strong>Tunnel 1 — ArgoCD:</strong> public hostname <code>argocd.pbcv.dev</code> → service <code>http://argocd-server.argocd.svc.cluster.local:80</code>. Copy token → paste into <code>infra/terraform/terraform.tfvars</code> as <code>argocd_tunnel_token</code></span></label>
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span><strong>Tunnel 2 — API:</strong> public hostname <code>projectx.pbcv.dev</code> → service <code>http://projectx-api.projectx.svc.cluster.local:80</code>. Copy token → paste into <code>infra/terraform-vault/terraform.tfvars</code> as <code>cloudflare_projectx_token</code></span></label>
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Add DNS CNAME records in Cloudflare for both hostnames (Cloudflare shows you the CNAME target after tunnel creation)</span></label>
+  </div>
+
+  <!-- ── 3. Vault ── -->
+  <h3 style="margin-top:1.5rem">3 — HashiCorp Vault (before running terraform-vault)</h3>
+  <div class="card">
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Make sure KV v2 is enabled: <code>vault secrets enable -path=kv kv-v2</code> (skip if already listed in <code>vault secrets list</code>)</span></label>
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Create <code>infra/terraform-vault/terraform.tfvars</code> (copy from <code>terraform.tfvars.example</code>) and fill in:
+      <pre style="margin:.4rem 0 0"><code>gcp_project_id            = "gcp-projectx-496112"
+vault_address             = "https://vault.pbcv.dev"
+cloudflare_projectx_token = "eyJ..."
+cloudflare_argocd_token   = "eyJ..."</code></pre></span></label>
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Export a Vault token that has write access: <code>export VAULT_TOKEN="hvs.your_token"</code></span></label>
+  </div>
+
+  <!-- ── 4. GitHub ── -->
+  <h3 style="margin-top:1.5rem">4 — GitHub Actions (after terraform apply)</h3>
+  <div class="card">
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Create a GitHub PAT at <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens/new</a> → Classic → <strong><code>repo</code> scope</strong> on <code>DemOnJR/ProjectX-ArgoCD</code>. Copy it.</span></label>
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>In <a href="https://github.com/DemOnJR/ProjectX/settings/secrets/actions" target="_blank">ProjectX → Settings → Secrets &amp; Variables → Actions</a> add:
+      <table style="margin:.5rem 0 0;width:100%">
+        <thead><tr><th>Type</th><th>Name</th><th>Where to get the value</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge br" style="background:rgba(248,81,73,.12);color:var(--red);border:1px solid rgba(248,81,73,.3)">Secret</span></td><td><code>GITOPS_PAT</code></td><td>PAT created above</td></tr>
+          <tr><td><span class="badge bb">Variable</span></td><td><code>WIF_PROVIDER</code></td><td><code>terraform output ci_wif_provider</code> (run after apply)</td></tr>
+          <tr><td><span class="badge bb">Variable</span></td><td><code>GCP_SERVICE_ACCOUNT</code></td><td><code>terraform output ci_service_account</code> (run after apply)</td></tr>
+          <tr><td><span class="badge bb">Variable</span></td><td><code>GCP_PROJECT_ID</code></td><td><code>gcp-projectx-496112</code></td></tr>
+        </tbody>
+      </table>
+    </span></label>
+  </div>
+
+  <!-- ── 5. values.yaml ── -->
+  <h3 style="margin-top:1.5rem">5 — Enable Cloudflare Tunnel + Vault in values.yaml</h3>
+  <div class="card">
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>In <code>ProjectX-ArgoCD/apps/projectx-api/values.yaml</code> set <code>cloudflareTunnel.enabled: true</code> and <code>vault.enabled: true</code>, then push to GitHub → ArgoCD syncs automatically.</span></label>
+    <div class="warn" style="margin:.4rem 0 0"><p>Leave <code>projectx_tunnel_token</code> <strong>empty</strong> in <code>infra/terraform/terraform.tfvars</code> when using Vault — otherwise both Terraform and VSO try to own the same K8s secret and conflict.</p></div>
+  </div>
+
+  <!-- ── 6. Apply order ── -->
+  <h3 style="margin-top:1.5rem">6 — Apply Order</h3>
+  <div class="card">
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span><code>cd infra/terraform &amp;&amp; terraform apply</code> — creates cluster, ArgoCD, VSO, ArgoCD tunnel</span></label>
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Copy <code>terraform output ci_wif_provider</code> and <code>ci_service_account</code> → set as GitHub Variables (step 4)</span></label>
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span><code>cd infra/terraform-vault &amp;&amp; terraform apply</code> — configures Vault auth + writes CF tokens</span></label>
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Enable <code>vault.enabled: true</code> + <code>cloudflareTunnel.enabled: true</code> in <code>values.yaml</code> → push → ArgoCD deploys VSO resources → cloudflared starts</span></label>
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Test CI: make a change to <code>app/main.py</code> → push → watch <a href="https://github.com/DemOnJR/ProjectX/actions" target="_blank">GitHub Actions</a> → ArgoCD auto-syncs</span></label>
   </div>
 </section>
 
