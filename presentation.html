@@ -6,114 +6,91 @@
   <title>ProjectX — Architecture & Deployment Guide</title>
   <style>
     :root {
-      --bg: #0d1117;
-      --bg2: #161b22;
-      --bg3: #21262d;
-      --border: #30363d;
-      --text: #e6edf3;
-      --muted: #8b949e;
-      --blue: #58a6ff;
-      --green: #3fb950;
-      --yellow: #d29922;
-      --orange: #f0883e;
-      --purple: #bc8cff;
-      --red: #f85149;
-      --teal: #39d353;
+      --bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--border:#30363d;
+      --text:#e6edf3;--muted:#8b949e;
+      --blue:#58a6ff;--green:#3fb950;--yellow:#d29922;
+      --orange:#f0883e;--purple:#bc8cff;--red:#f85149;--teal:#39d353;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 15px; line-height: 1.6; }
-    a { color: var(--blue); text-decoration: none; }
-    a:hover { text-decoration: underline; }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:15px;line-height:1.6}
+    a{color:var(--blue);text-decoration:none}
+    a:hover{text-decoration:underline}
+    nav{position:sticky;top:0;z-index:100;background:var(--bg2);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;gap:1.2rem;height:50px;overflow-x:auto;white-space:nowrap}
+    nav .logo{font-weight:700;font-size:1.05rem;color:var(--blue);margin-right:0.5rem}
+    nav a{color:var(--muted);font-size:0.85rem}
+    nav a:hover{color:var(--text);text-decoration:none}
+    main{max-width:1000px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+    section{margin-bottom:3.5rem}
+    h1{font-size:1.9rem;font-weight:700;margin-bottom:0.4rem}
+    h2{font-size:1.35rem;font-weight:600;margin-bottom:1.2rem;padding-bottom:0.5rem;border-bottom:1px solid var(--border);color:var(--blue)}
+    h3{font-size:1rem;font-weight:600;margin:1.4rem 0 0.6rem}
+    p{margin-bottom:0.8rem;color:#c9d1d9}
+    .tagline{color:var(--muted);margin-bottom:2rem}
+    .card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.1rem 1.3rem;margin-bottom:1rem}
+    .card h3{margin-top:0}
+    .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem;margin-bottom:1rem}
+    .steps{counter-reset:step}
+    .step{display:flex;gap:1rem;margin-bottom:1.2rem}
+    .step::before{counter-increment:step;content:counter(step);min-width:26px;height:26px;background:var(--blue);color:#000;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.82rem;flex-shrink:0;margin-top:3px}
+    .step-body{flex:1}
+    .step-body p{margin:0}
+    pre{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:0.9rem 1.1rem;overflow-x:auto;margin:0.5rem 0 1rem;font-size:0.82rem;line-height:1.55}
+    code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace}
+    p code,li code{background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-size:0.84em}
+    .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:0.73rem;font-weight:600}
+    .bb{background:rgba(88,166,255,.15);color:var(--blue);border:1px solid rgba(88,166,255,.3)}
+    .bg{background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.3)}
+    .bo{background:rgba(240,136,62,.15);color:var(--orange);border:1px solid rgba(240,136,62,.3)}
+    .bp{background:rgba(188,140,255,.15);color:var(--purple);border:1px solid rgba(188,140,255,.3)}
+    .by{background:rgba(210,153,34,.15);color:var(--yellow);border:1px solid rgba(210,153,34,.3)}
+    .note{background:rgba(88,166,255,.07);border-left:3px solid var(--blue);border-radius:0 6px 6px 0;padding:.75rem 1rem;margin:.8rem 0}
+    .warn{background:rgba(210,153,34,.07);border-left:3px solid var(--yellow);border-radius:0 6px 6px 0;padding:.75rem 1rem;margin:.8rem 0}
+    .tip{background:rgba(63,185,80,.07);border-left:3px solid var(--green);border-radius:0 6px 6px 0;padding:.75rem 1rem;margin:.8rem 0}
+    .danger{background:rgba(248,81,73,.07);border-left:3px solid var(--red);border-radius:0 6px 6px 0;padding:.75rem 1rem;margin:.8rem 0}
+    .note p,.warn p,.tip p,.danger p{margin:0}
+    table{width:100%;border-collapse:collapse;font-size:0.87rem;margin-bottom:1rem}
+    th{background:var(--bg3);color:var(--muted);font-weight:600;padding:.55rem 1rem;text-align:left;border-bottom:2px solid var(--border)}
+    td{padding:.5rem 1rem;border-bottom:1px solid var(--border)}
+    tr:last-child td{border-bottom:none}
+    ul,ol{padding-left:1.4rem}
+    li{margin-bottom:.3rem;color:#c9d1d9}
+    .flow{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin:.8rem 0}
+    .fi{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:.83rem}
+    .fa{color:var(--muted);font-size:1rem}
+    .checklist{list-style:none;padding:0}
+    .checklist li{padding:.25rem 0;display:flex;align-items:flex-start;gap:.5rem}
+    .checklist li::before{content:"✓";color:var(--green);font-weight:700;flex-shrink:0}
+    hr{border:none;border-top:1px solid var(--border);margin:1.8rem 0}
 
-    /* Layout */
-    nav { position: sticky; top: 0; z-index: 100; background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; gap: 1.5rem; height: 52px; }
-    nav .logo { font-weight: 700; font-size: 1.1rem; color: var(--blue); white-space: nowrap; }
-    nav a { color: var(--muted); font-size: 0.88rem; white-space: nowrap; }
-    nav a:hover { color: var(--text); text-decoration: none; }
-    main { max-width: 960px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
-    section { margin-bottom: 3.5rem; }
-    h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; }
-    h2 { font-size: 1.4rem; font-weight: 600; margin-bottom: 1.2rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); color: var(--blue); }
-    h3 { font-size: 1.05rem; font-weight: 600; margin: 1.4rem 0 0.6rem; }
-    p { margin-bottom: 0.8rem; color: #c9d1d9; }
-
-    /* Cards */
-    .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.4rem; margin-bottom: 1rem; }
-    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
-    .card h3 { margin-top: 0; }
-
-    /* Steps */
-    .steps { counter-reset: step; }
-    .step { display: flex; gap: 1rem; margin-bottom: 1.2rem; }
-    .step::before { counter-increment: step; content: counter(step); min-width: 28px; height: 28px; background: var(--blue); color: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; margin-top: 2px; }
-    .step-body { flex: 1; }
-    .step-body p { margin: 0; }
-
-    /* Code */
-    pre { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 1rem 1.2rem; overflow-x: auto; margin: 0.6rem 0 1rem; font-size: 0.83rem; line-height: 1.5; }
-    code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
-    p code, li code { background: var(--bg3); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 0.85em; }
-
-    /* Badges / tags */
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
-    .badge-blue { background: rgba(88,166,255,0.15); color: var(--blue); border: 1px solid rgba(88,166,255,0.3); }
-    .badge-green { background: rgba(63,185,80,0.15); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
-    .badge-orange { background: rgba(240,136,62,0.15); color: var(--orange); border: 1px solid rgba(240,136,62,0.3); }
-    .badge-purple { background: rgba(188,140,255,0.15); color: var(--purple); border: 1px solid rgba(188,140,255,0.3); }
-    .badge-yellow { background: rgba(210,153,34,0.15); color: var(--yellow); border: 1px solid rgba(210,153,34,0.3); }
-
-    /* Callouts */
-    .note { background: rgba(88,166,255,0.08); border-left: 3px solid var(--blue); border-radius: 0 6px 6px 0; padding: 0.8rem 1rem; margin: 0.8rem 0; }
-    .warn { background: rgba(210,153,34,0.08); border-left: 3px solid var(--yellow); border-radius: 0 6px 6px 0; padding: 0.8rem 1rem; margin: 0.8rem 0; }
-    .tip { background: rgba(63,185,80,0.08); border-left: 3px solid var(--green); border-radius: 0 6px 6px 0; padding: 0.8rem 1rem; margin: 0.8rem 0; }
-    .danger { background: rgba(248,81,73,0.08); border-left: 3px solid var(--red); border-radius: 0 6px 6px 0; padding: 0.8rem 1rem; margin: 0.8rem 0; }
-    .note p, .warn p, .tip p, .danger p { margin: 0; }
-
-    /* Table */
-    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-bottom: 1rem; }
-    th { background: var(--bg3); color: var(--muted); font-weight: 600; padding: 0.6rem 1rem; text-align: left; border-bottom: 2px solid var(--border); }
-    td { padding: 0.55rem 1rem; border-bottom: 1px solid var(--border); }
-    tr:last-child td { border-bottom: none; }
-
-    /* Architecture SVG */
-    .arch-container { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; overflow-x: auto; }
-    svg text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-
-    /* Flow arrows */
-    .flow { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin: 0.8rem 0; }
-    .flow-item { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 4px 12px; font-size: 0.85rem; }
-    .flow-arrow { color: var(--muted); font-size: 1.1rem; }
-
-    /* Checklist */
-    .checklist { list-style: none; }
-    .checklist li { padding: 0.3rem 0; display: flex; align-items: flex-start; gap: 0.5rem; }
-    .checklist li::before { content: "✓"; color: var(--green); font-weight: 700; flex-shrink: 0; }
-
-    ul, ol { padding-left: 1.4rem; }
-    li { margin-bottom: 0.3rem; color: #c9d1d9; }
-
-    /* Repo header */
-    .repo-header { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.2rem; }
-    .repo-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
-
-    hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
-
-    /* Tag line */
-    .tagline { color: var(--muted); font-size: 1rem; margin-bottom: 2rem; }
+    /* ── Diagram canvas ──────────────────────────────────────── */
+    .diagram-section{margin-bottom:2rem}
+    .diagram-tabs{display:flex;gap:0;margin-bottom:0;border-bottom:1px solid var(--border)}
+    .diagram-tab{background:none;border:none;border-bottom:2px solid transparent;padding:.55rem 1.1rem;color:var(--muted);font-size:.88rem;cursor:pointer;transition:color .15s,border-color .15s;margin-bottom:-1px}
+    .diagram-tab:hover{color:var(--text)}
+    .diagram-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+    .diagram-panel{display:none}
+    .diagram-panel.active{display:block}
+    .diagram-wrap{background:var(--bg2);border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;position:relative;overflow:hidden}
+    .diagram-controls{position:absolute;top:.5rem;right:.6rem;z-index:10;display:flex;gap:.35rem;align-items:center}
+    .diagram-controls button{background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:4px;width:26px;height:26px;cursor:pointer;font-size:.95rem;line-height:1;display:flex;align-items:center;justify-content:center}
+    .diagram-controls button:hover{background:var(--border)}
+    .diagram-hint{color:var(--muted);font-size:.72rem;margin-right:.3rem}
+    .canvas-container{height:500px;overflow:hidden;cursor:grab;user-select:none;-webkit-user-select:none}
+    .canvas-container.dragging{cursor:grabbing}
+    .canvas-container svg{display:block}
   </style>
 </head>
 <body>
-
 <nav>
   <span class="logo">⚡ ProjectX</span>
   <a href="#overview">Overview</a>
-  <a href="#architecture">Architecture</a>
+  <a href="#diagrams">Diagrams</a>
   <a href="#gcp-setup">GCP Setup</a>
   <a href="#deploy">Deploy</a>
   <a href="#docker">Docker Image</a>
-  <a href="#argocd">Argo CD</a>
-  <a href="#optional">CF Tunnels</a>
   <a href="#ci">CI / Auto-Deploy</a>
+  <a href="#argocd">Argo CD</a>
+  <a href="#cf">CF Tunnels</a>
   <a href="#vault">Vault</a>
   <a href="#destroy">Destroy</a>
   <a href="#troubleshoot">Troubleshoot</a>
@@ -121,963 +98,997 @@
 
 <main>
 
-  <!-- Hero -->
-  <section id="overview">
-    <h1>ProjectX</h1>
-    <p class="tagline">FastAPI on GKE · GitOps with Argo CD · Infrastructure as Code with Terraform</p>
+<!-- ══════════════════════════════════════════════════════════ OVERVIEW -->
+<section id="overview">
+  <h1>ProjectX</h1>
+  <p class="tagline">FastAPI on GKE · GitOps with Argo CD · Keyless CI via GitHub Actions · Secrets in HashiCorp Vault</p>
+  <div class="card-grid">
+    <div class="card"><div style="font-size:1.4rem;margin-bottom:.4rem">📦</div><h3>ProjectX</h3><p>FastAPI app source + Terraform that provisions all GCP infrastructure, CI identity, and optional Cloudflare tunnels.</p><span class="badge bb">Python</span> <span class="badge bo">Terraform</span></div>
+    <div class="card"><div style="font-size:1.4rem;margin-bottom:.4rem">🔄</div><h3>ProjectX-ArgoCD</h3><p>GitOps repo — Helm chart for the app. Argo CD watches this and syncs every commit automatically.</p><span class="badge bp">Helm</span> <span class="badge bg">GitOps</span></div>
+    <div class="card"><div style="font-size:1.4rem;margin-bottom:.4rem">⚙️</div><h3>GitHub Actions CI</h3><p>Triggered on every push to <code>app/</code>. Builds image, pushes to Artifact Registry, updates image tag — zero manual steps.</p><span class="badge bg">Automated</span></div>
+    <div class="card"><div style="font-size:1.4rem;margin-bottom:.4rem">🔐</div><h3>HashiCorp Vault</h3><p>Stores Cloudflare tunnel tokens. Vault Secrets Operator syncs them into the cluster automatically.</p><span class="badge by">Vault</span></div>
+  </div>
+</section>
 
-    <div class="card-grid">
-      <div class="card">
-        <div style="font-size:1.5rem;margin-bottom:0.5rem">📦</div>
-        <h3>ProjectX</h3>
-        <p>App source code (FastAPI) + Terraform that provisions all GCP infrastructure.</p>
-        <span class="badge badge-blue">Python</span> <span class="badge badge-orange">Terraform</span>
-      </div>
-      <div class="card">
-        <div style="font-size:1.5rem;margin-bottom:0.5rem">🔄</div>
-        <h3>ProjectX-ArgoCD</h3>
-        <p>GitOps repo — Helm chart for the app. Argo CD watches this repo and syncs changes automatically.</p>
-        <span class="badge badge-purple">Helm</span> <span class="badge badge-green">GitOps</span>
-      </div>
-      <div class="card">
-        <div style="font-size:1.5rem;margin-bottom:0.5rem">☁️</div>
-        <h3>Google Cloud</h3>
-        <p>VPC · GKE Autopilot-style cluster · Artifact Registry · IAM — all managed by Terraform.</p>
-        <span class="badge badge-yellow">GKE</span> <span class="badge badge-blue">GCP</span>
+<!-- ══════════════════════════════════════════════════════════ DIAGRAMS -->
+<section id="diagrams">
+  <h2>Architecture Diagrams</h2>
+  <p>Use <strong>scroll to zoom</strong>, <strong>drag to pan</strong>. Click + / − or use the reset button to fit the view.</p>
+
+  <div class="diagram-section">
+    <div class="diagram-tabs">
+      <button class="diagram-tab active" data-panel="p-arch">Full Architecture</button>
+      <button class="diagram-tab" data-panel="p-ci">CI/CD Pipeline</button>
+      <button class="diagram-tab" data-panel="p-vault">Vault &amp; Secrets</button>
+    </div>
+
+    <!-- ── Panel 1: Full Architecture ── -->
+    <div id="p-arch" class="diagram-panel active">
+      <div class="diagram-wrap">
+        <div class="diagram-controls">
+          <span class="diagram-hint">scroll · drag</span>
+          <button data-action="zoomin">+</button>
+          <button data-action="zoomout">−</button>
+          <button data-action="reset">⊙</button>
+        </div>
+        <div class="canvas-container" id="cc-arch">
+          <svg id="svg-arch" viewBox="0 0 1580 820" xmlns="http://www.w3.org/2000/svg" style="width:1580px;height:820px">
+            <defs>
+              <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#8b949e"/></marker>
+              <marker id="ah-b" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#58a6ff"/></marker>
+              <marker id="ah-g" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#3fb950"/></marker>
+              <marker id="ah-o" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#f0883e"/></marker>
+              <marker id="ah-p" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#bc8cff"/></marker>
+              <marker id="ah-y" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#d29922"/></marker>
+            </defs>
+            <g id="g-arch">
+              <!-- Background -->
+              <rect width="1580" height="820" fill="#0d1117"/>
+
+              <!-- ── Developer ── -->
+              <rect x="20" y="340" width="100" height="80" rx="8" fill="#21262d" stroke="#58a6ff" stroke-width="1.5"/>
+              <text x="70" y="368" text-anchor="middle" fill="#58a6ff" font-size="22" font-family="sans-serif">👤</text>
+              <text x="70" y="390" text-anchor="middle" fill="#e6edf3" font-size="11" font-family="sans-serif" font-weight="600">Developer</text>
+              <text x="70" y="405" text-anchor="middle" fill="#8b949e" font-size="10" font-family="sans-serif">edits app/</text>
+
+              <!-- ── GitHub Box ── -->
+              <rect x="165" y="60" width="210" height="580" rx="10" fill="rgba(36,41,47,0.4)" stroke="#30363d" stroke-width="1.5"/>
+              <text x="270" y="85" text-anchor="middle" fill="#8b949e" font-size="11" font-family="sans-serif">GitHub</text>
+
+              <!-- ProjectX repo -->
+              <rect x="180" y="95" width="180" height="55" rx="6" fill="#21262d" stroke="#bc8cff" stroke-width="1.2"/>
+              <text x="270" y="116" text-anchor="middle" fill="#bc8cff" font-size="10" font-family="sans-serif" font-weight="600">repo: ProjectX</text>
+              <text x="270" y="133" text-anchor="middle" fill="#8b949e" font-size="9.5" font-family="sans-serif">app/ · infra/terraform/</text>
+              <text x="270" y="147" text-anchor="middle" fill="#8b949e" font-size="9.5" font-family="sans-serif">.github/workflows/ci.yml</text>
+
+              <!-- ArgoCD repo -->
+              <rect x="180" y="165" width="180" height="55" rx="6" fill="#21262d" stroke="#3fb950" stroke-width="1.2"/>
+              <text x="270" y="186" text-anchor="middle" fill="#3fb950" font-size="10" font-family="sans-serif" font-weight="600">repo: ProjectX-ArgoCD</text>
+              <text x="270" y="203" text-anchor="middle" fill="#8b949e" font-size="9.5" font-family="sans-serif">apps/projectx-api/</text>
+              <text x="270" y="217" text-anchor="middle" fill="#8b949e" font-size="9.5" font-family="sans-serif">values.yaml · templates/</text>
+
+              <!-- GH Actions -->
+              <rect x="180" y="255" width="180" height="115" rx="6" fill="#21262d" stroke="#f0883e" stroke-width="1.5"/>
+              <text x="270" y="274" text-anchor="middle" fill="#f0883e" font-size="10" font-family="sans-serif" font-weight="600">GitHub Actions CI</text>
+              <rect x="192" y="282" width="156" height="24" rx="4" fill="#161b22" stroke="#30363d"/>
+              <text x="270" y="299" text-anchor="middle" fill="#e6edf3" font-size="9" font-family="sans-serif">1. WIF auth to GCP</text>
+              <rect x="192" y="311" width="156" height="24" rx="4" fill="#161b22" stroke="#30363d"/>
+              <text x="270" y="328" text-anchor="middle" fill="#e6edf3" font-size="9" font-family="sans-serif">2. docker build + push</text>
+              <rect x="192" y="340" width="156" height="24" rx="4" fill="#161b22" stroke="#30363d"/>
+              <text x="270" y="357" text-anchor="middle" fill="#e6edf3" font-size="9" font-family="sans-serif">3. update image.tag</text>
+
+              <!-- ── GCP Boundary ── -->
+              <rect x="420" y="30" width="960" height="700" rx="12" fill="none" stroke="#1a73e8" stroke-width="1.5" stroke-dasharray="8,4"/>
+              <text x="436" y="52" fill="#4285f4" font-size="11" font-family="sans-serif" font-weight="600">Google Cloud — gcp-projectx-496112</text>
+
+              <!-- Artifact Registry -->
+              <rect x="445" y="62" width="260" height="70" rx="8" fill="#21262d" stroke="#f0883e" stroke-width="1.5"/>
+              <text x="575" y="84" text-anchor="middle" fill="#f0883e" font-size="11" font-family="sans-serif" font-weight="600">Artifact Registry</text>
+              <text x="575" y="101" text-anchor="middle" fill="#8b949e" font-size="9.5" font-family="sans-serif">eu-west3-docker.pkg.dev/gcp-projectx-496112/projectx</text>
+              <text x="575" y="118" text-anchor="middle" fill="#8b949e" font-size="9.5" font-family="sans-serif">projectx-api:&lt;sha&gt; · projectx-api:latest</text>
+
+              <!-- CI SA + WIF label -->
+              <rect x="445" y="148" width="260" height="38" rx="6" fill="rgba(240,136,62,0.08)" stroke="#30363d"/>
+              <text x="575" y="165" text-anchor="middle" fill="#8b949e" font-size="9.5" font-family="sans-serif">Service Account: projectx-ci</text>
+              <text x="575" y="180" text-anchor="middle" fill="#8b949e" font-size="9.5" font-family="sans-serif">WIF pool: github-actions  (no keys)</text>
+
+              <!-- VPC Boundary -->
+              <rect x="435" y="205" width="930" height="505" rx="10" fill="none" stroke="#30363d" stroke-width="1.2" stroke-dasharray="6,3"/>
+              <text x="450" y="222" fill="#8b949e" font-size="10" font-family="sans-serif">VPC — projectx-vpc  (10.10.0.0/20 · pods 10.20.0.0/16 · services 10.30.0.0/20)</text>
+
+              <!-- GKE Cluster -->
+              <rect x="455" y="232" width="890" height="460" rx="8" fill="rgba(88,166,255,0.04)" stroke="#58a6ff" stroke-width="1.2"/>
+              <text x="473" y="250" fill="#58a6ff" font-size="11" font-family="sans-serif" font-weight="600">GKE Cluster — projectx-gke  ·  europe-west3  ·  e2-standard-2  ·  autoscaling 1–4/zone</text>
+
+              <!-- ns: argocd -->
+              <rect x="470" y="260" width="215" height="400" rx="7" fill="#21262d" stroke="#bc8cff" stroke-width="1.2"/>
+              <text x="577" y="278" text-anchor="middle" fill="#bc8cff" font-size="10" font-family="sans-serif" font-weight="600">namespace: argocd</text>
+              <rect x="483" y="286" width="189" height="45" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="577" y="304" text-anchor="middle" fill="#e6edf3" font-size="10" font-family="sans-serif" font-weight="600">Argo CD</text>
+              <text x="577" y="322" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Helm chart v7.x · ClusterIP</text>
+              <rect x="483" y="340" width="189" height="35" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="577" y="352" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Application CR:</text>
+              <text x="577" y="367" text-anchor="middle" fill="#3fb950" font-size="9" font-family="sans-serif">projectx-api → projectx ns</text>
+              <rect x="483" y="385" width="189" height="45" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="577" y="403" text-anchor="middle" fill="#e6edf3" font-size="10" font-family="sans-serif" font-weight="600">cloudflared</text>
+              <text x="577" y="419" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">2 replicas → argocd-server:80</text>
+              <rect x="483" y="440" width="189" height="30" rx="5" fill="rgba(210,153,34,0.1)" stroke="#30363d"/>
+              <text x="577" y="460" text-anchor="middle" fill="#d29922" font-size="9" font-family="sans-serif">secret: argocd-cloudflared-token</text>
+              <rect x="483" y="478" width="189" height="30" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="577" y="493" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">redis · dex · repo-server</text>
+              <rect x="483" y="516" width="189" height="30" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="577" y="531" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">application-controller</text>
+              <rect x="483" y="554" width="189" height="30" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="577" y="569" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">notifications · appset-ctrl</text>
+              <rect x="483" y="592" width="189" height="30" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="577" y="612" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">argocd-server:80 (ClusterIP)</text>
+
+              <!-- ns: projectx -->
+              <rect x="700" y="260" width="245" height="400" rx="7" fill="#21262d" stroke="#3fb950" stroke-width="1.2"/>
+              <text x="822" y="278" text-anchor="middle" fill="#3fb950" font-size="10" font-family="sans-serif" font-weight="600">namespace: projectx</text>
+              <rect x="712" y="286" width="221" height="45" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="822" y="304" text-anchor="middle" fill="#e6edf3" font-size="10" font-family="sans-serif" font-weight="600">Deployment: projectx-api</text>
+              <text x="822" y="322" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">image: ...projectx-api:&lt;sha&gt;</text>
+              <rect x="712" y="340" width="221" height="30" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="822" y="360" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">HPA  ·  min 2 → max 10 replicas</text>
+              <rect x="712" y="378" width="221" height="30" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="822" y="398" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Service: ClusterIP :80 → :8000</text>
+              <rect x="712" y="416" width="221" height="45" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="822" y="434" text-anchor="middle" fill="#e6edf3" font-size="10" font-family="sans-serif" font-weight="600">cloudflared</text>
+              <text x="822" y="452" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">2 replicas → projectx-api:80</text>
+              <rect x="712" y="469" width="221" height="30" rx="5" fill="rgba(210,153,34,0.1)" stroke="#30363d"/>
+              <text x="822" y="489" text-anchor="middle" fill="#d29922" font-size="9" font-family="sans-serif">secret: cloudflared-token  ← VSO</text>
+              <rect x="712" y="507" width="221" height="30" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="822" y="527" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">SA: projectx-vault-auth</text>
+              <rect x="712" y="545" width="221" height="30" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="822" y="565" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">VaultConnection + VaultAuth</text>
+              <rect x="712" y="583" width="221" height="30" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="822" y="603" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">VaultStaticSecret CR</text>
+              <rect x="712" y="621" width="221" height="29" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="822" y="640" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Ingress (optional · gce)</text>
+
+              <!-- ns: vso -->
+              <rect x="960" y="260" width="215" height="145" rx="7" fill="#21262d" stroke="#d29922" stroke-width="1.2"/>
+              <text x="1067" y="278" text-anchor="middle" fill="#d29922" font-size="10" font-family="sans-serif" font-weight="600">namespace: vault-secrets-operator</text>
+              <rect x="972" y="286" width="191" height="55" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="1067" y="307" text-anchor="middle" fill="#e6edf3" font-size="10" font-family="sans-serif" font-weight="600">Vault Secrets Operator</text>
+              <text x="1067" y="325" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Helm chart · Kubernetes auth</text>
+              <text x="1067" y="340" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">watches VaultStaticSecret CRs</text>
+              <rect x="972" y="350" width="191" height="30" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="1067" y="370" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">reconciles every refreshAfter (1h)</text>
+              <rect x="972" y="389" width="191" height="26" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="1067" y="407" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">→ creates/updates K8s secrets</text>
+
+              <!-- Node Pool -->
+              <rect x="465" y="680" width="860" height="28" rx="5" fill="rgba(88,166,255,0.07)" stroke="#30363d"/>
+              <text x="895" y="699" text-anchor="middle" fill="#8b949e" font-size="9.5" font-family="sans-serif">Node Pool: projectx-pool  ·  zones: europe-west3-a, europe-west3-b  ·  disk: 50 GB pd-balanced</text>
+
+              <!-- ── Cloudflare ── -->
+              <rect x="1420" y="170" width="145" height="230" rx="8" fill="#21262d" stroke="#f38020" stroke-width="1.5"/>
+              <text x="1492" y="191" text-anchor="middle" fill="#f38020" font-size="11" font-family="sans-serif" font-weight="600">Cloudflare</text>
+              <rect x="1432" y="200" width="121" height="40" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="1492" y="215" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-family="sans-serif" font-weight="600">argocd.pbcv.dev</text>
+              <text x="1492" y="232" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">tunnel → argocd-server</text>
+              <rect x="1432" y="248" width="121" height="40" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="1492" y="263" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-family="sans-serif" font-weight="600">projectx.pbcv.dev</text>
+              <text x="1492" y="280" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">tunnel → projectx-api</text>
+              <rect x="1432" y="298" width="121" height="30" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="1492" y="318" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">DNS + TLS (auto)</text>
+              <rect x="1432" y="336" width="121" height="30" rx="5" fill="#161b22" stroke="#30363d"/>
+              <text x="1492" y="356" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Zero Trust rules</text>
+
+              <!-- Users -->
+              <rect x="1430" y="430" width="125" height="55" rx="8" fill="#21262d" stroke="#30363d"/>
+              <text x="1492" y="453" text-anchor="middle" fill="#e6edf3" font-size="18" font-family="sans-serif">🌐</text>
+              <text x="1492" y="476" text-anchor="middle" fill="#8b949e" font-size="10" font-family="sans-serif">Internet Users</text>
+
+              <!-- ── Vault ── -->
+              <rect x="20" y="600" width="165" height="95" rx="8" fill="#21262d" stroke="#d29922" stroke-width="1.5"/>
+              <text x="102" y="622" text-anchor="middle" fill="#d29922" font-size="11" font-family="sans-serif" font-weight="600">HashiCorp Vault</text>
+              <text x="102" y="638" text-anchor="middle" fill="#8b949e" font-size="9.5" font-family="sans-serif">vault.pbcv.dev</text>
+              <rect x="32" y="645" width="141" height="22" rx="4" fill="#161b22" stroke="#30363d"/>
+              <text x="102" y="661" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">kv/projectx · kv/argocd</text>
+              <rect x="32" y="671" width="141" height="18" rx="4" fill="#161b22" stroke="#30363d"/>
+              <text x="102" y="684" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Kubernetes auth backend</text>
+
+              <!-- Terraform label -->
+              <rect x="20" y="490" width="140" height="80" rx="6" fill="#21262d" stroke="#f0883e" stroke-width="1.2"/>
+              <text x="90" y="510" text-anchor="middle" fill="#f0883e" font-size="10.5" font-family="sans-serif" font-weight="600">Terraform</text>
+              <text x="90" y="526" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">infra/terraform/</text>
+              <text x="90" y="541" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">provisions GCP + K8s</text>
+              <text x="90" y="556" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">infra/terraform-vault/</text>
+              <text x="90" y="571" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">configures Vault auth</text>
+
+              <!-- ── ARROWS ── -->
+              <!-- dev → ProjectX repo -->
+              <line x1="120" y1="365" x2="165" y2="140" stroke="#8b949e" stroke-width="1.2" marker-end="url(#ah)"/>
+              <text x="127" y="260" fill="#8b949e" font-size="9" font-family="sans-serif" transform="rotate(-70,127,260)">git push</text>
+
+              <!-- dev → ArgoCD repo (update values.yaml - goes via CI) -->
+
+              <!-- GH Actions → AR (docker push) -->
+              <line x1="362" y1="300" x2="443" y2="110" stroke="#f0883e" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ah-o)"/>
+              <text x="385" y="208" fill="#f0883e" font-size="9" font-family="sans-serif">docker push</text>
+
+              <!-- GH Actions → ArgoCD repo (update tag) -->
+              <line x1="270" y1="370" x2="270" y2="220" stroke="#3fb950" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#ah-g)"/>
+              <text x="275" y="255" fill="#3fb950" font-size="9" font-family="sans-serif">update</text>
+              <text x="275" y="267" fill="#3fb950" font-size="9" font-family="sans-serif">image.tag</text>
+
+              <!-- ArgoCD watches ArgoCD repo -->
+              <path d="M 577 286 Q 577 240 360 215" fill="none" stroke="#bc8cff" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#ah-p)"/>
+              <text x="430" y="237" fill="#bc8cff" font-size="9" font-family="sans-serif">watches (git poll)</text>
+
+              <!-- AR → GKE (image pull) -->
+              <line x1="575" y1="132" x2="575" y2="230" stroke="#f0883e" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#ah-o)"/>
+              <text x="580" y="185" fill="#f0883e" font-size="9" font-family="sans-serif">pull image</text>
+
+              <!-- ArgoCD → projectx ns (sync) -->
+              <line x1="694" y1="330" x2="700" y2="330" stroke="#3fb950" stroke-width="1.5" marker-end="url(#ah-g)"/>
+              <text x="694" y="320" fill="#3fb950" font-size="9" font-family="sans-serif">sync</text>
+
+              <!-- cloudflared argocd → Cloudflare -->
+              <line x1="685" y1="410" x2="1419" y2="240" stroke="#f38020" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#ah-o)"/>
+              <text x="1050" y="310" fill="#f38020" font-size="9" font-family="sans-serif">cloudflare tunnel</text>
+
+              <!-- cloudflared projectx → Cloudflare -->
+              <line x1="945" y1="440" x2="1430" y2="268" stroke="#f38020" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#ah-o)"/>
+
+              <!-- Cloudflare → Users -->
+              <line x1="1492" y1="400" x2="1492" y2="429" stroke="#8b949e" stroke-width="1.2" marker-end="url(#ah)"/>
+              <text x="1497" y="420" fill="#8b949e" font-size="9" font-family="sans-serif">HTTPS</text>
+
+              <!-- Vault → VSO -->
+              <line x1="185" y1="645" x2="430" y2="360" stroke="#d29922" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#ah-y)"/>
+              <text x="230" y="480" fill="#d29922" font-size="9" font-family="sans-serif">Kubernetes auth</text>
+              <text x="230" y="492" fill="#d29922" font-size="9" font-family="sans-serif">reads secrets</text>
+
+              <!-- VSO → cloudflared-token secret -->
+              <line x1="960" y1="400" x2="945" y2="485" stroke="#d29922" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#ah-y)"/>
+              <text x="950" y="448" fill="#d29922" font-size="9" font-family="sans-serif">creates</text>
+              <text x="950" y="460" fill="#d29922" font-size="9" font-family="sans-serif">K8s secret</text>
+
+              <!-- Terraform → GCP -->
+              <line x1="162" y1="520" x2="430" y2="520" stroke="#f0883e" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#ah-o)"/>
+              <text x="235" y="513" fill="#f0883e" font-size="9" font-family="sans-serif">terraform apply</text>
+            </g>
+          </svg>
+        </div>
       </div>
     </div>
 
-    <div class="note">
-      <p><strong>Two repos, one flow:</strong> <code>ProjectX</code> builds and pushes the Docker image, <code>ProjectX-ArgoCD</code> declares the desired state, and Argo CD makes the cluster match it automatically.</p>
-    </div>
-  </section>
+    <!-- ── Panel 2: CI/CD Pipeline ── -->
+    <div id="p-ci" class="diagram-panel">
+      <div class="diagram-wrap">
+        <div class="diagram-controls">
+          <span class="diagram-hint">scroll · drag</span>
+          <button data-action="zoomin">+</button>
+          <button data-action="zoomout">−</button>
+          <button data-action="reset">⊙</button>
+        </div>
+        <div class="canvas-container" id="cc-ci">
+          <svg id="svg-ci" viewBox="0 0 1500 560" xmlns="http://www.w3.org/2000/svg" style="width:1500px;height:560px">
+            <defs>
+              <marker id="ci-ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#8b949e"/></marker>
+              <marker id="ci-ao" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#f0883e"/></marker>
+              <marker id="ci-ag" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#3fb950"/></marker>
+              <marker id="ci-ap" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#bc8cff"/></marker>
+            </defs>
+            <g id="g-ci">
+              <rect width="1500" height="560" fill="#0d1117"/>
 
-  <!-- Architecture -->
-  <section id="architecture">
-    <h2>Architecture</h2>
+              <!-- Title -->
+              <text x="750" y="35" text-anchor="middle" fill="#8b949e" font-size="13" font-family="sans-serif" font-weight="600">CI/CD Pipeline — Triggered by push to ProjectX/main (app/**)</text>
 
-    <div class="arch-container">
-      <svg viewBox="0 0 860 480" width="100%" style="max-width:860px;display:block;margin:auto">
-        <defs>
-          <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-            <polygon points="0 0, 8 3, 0 6" fill="#8b949e"/>
-          </marker>
-          <marker id="arrow-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-            <polygon points="0 0, 8 3, 0 6" fill="#58a6ff"/>
-          </marker>
-          <marker id="arrow-green" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-            <polygon points="0 0, 8 3, 0 6" fill="#3fb950"/>
-          </marker>
-        </defs>
+              <!-- Step boxes - top row (CI trigger → build → push) -->
+              <!-- 1: Code Change -->
+              <rect x="30" y="70" width="155" height="110" rx="8" fill="#21262d" stroke="#8b949e" stroke-width="1.2"/>
+              <text x="107" y="92" text-anchor="middle" fill="#8b949e" font-size="10.5" font-family="sans-serif" font-weight="600">1. Code Change</text>
+              <text x="107" y="110" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-family="sans-serif">Edit app/main.py</text>
+              <text x="107" y="126" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-family="sans-serif">or any file in app/</text>
+              <text x="107" y="148" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">git push origin main</text>
+              <text x="107" y="163" text-anchor="middle" fill="#3fb950" font-size="9" font-family="sans-serif">✓ triggers workflow</text>
 
-        <!-- Developer -->
-        <rect x="10" y="200" width="100" height="60" rx="8" fill="#21262d" stroke="#58a6ff" stroke-width="1.5"/>
-        <text x="60" y="225" text-anchor="middle" fill="#58a6ff" font-size="18">👤</text>
-        <text x="60" y="248" text-anchor="middle" fill="#e6edf3" font-size="11">Developer</text>
+              <!-- 2: GHA trigger -->
+              <rect x="230" y="70" width="175" height="110" rx="8" fill="#21262d" stroke="#f0883e" stroke-width="1.5"/>
+              <text x="317" y="92" text-anchor="middle" fill="#f0883e" font-size="10.5" font-family="sans-serif" font-weight="600">2. GitHub Actions</text>
+              <text x="317" y="110" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-family="sans-serif">.github/workflows/ci.yml</text>
+              <text x="317" y="126" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">ubuntu-latest runner</text>
+              <text x="317" y="148" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">WIF token exchange</text>
+              <text x="317" y="163" text-anchor="middle" fill="#3fb950" font-size="9" font-family="sans-serif">✓ GCP auth (no keys)</text>
 
-        <!-- GitHub Repos -->
-        <rect x="155" y="155" width="130" height="55" rx="8" fill="#21262d" stroke="#30363d" stroke-width="1.5"/>
-        <text x="220" y="176" text-anchor="middle" fill="#8b949e" font-size="10">GitHub Repo</text>
-        <text x="220" y="194" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="600">ProjectX</text>
-        <text x="220" y="208" text-anchor="middle" fill="#8b949e" font-size="10">app + terraform</text>
+              <!-- 3: Build -->
+              <rect x="455" y="70" width="170" height="110" rx="8" fill="#21262d" stroke="#f0883e" stroke-width="1.2"/>
+              <text x="540" y="92" text-anchor="middle" fill="#f0883e" font-size="10.5" font-family="sans-serif" font-weight="600">3. docker build</text>
+              <text x="540" y="110" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">FROM python:3.12-slim</text>
+              <text x="540" y="126" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">COPY requirements.txt</text>
+              <text x="540" y="142" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">RUN pip install -r ...</text>
+              <text x="540" y="158" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">COPY main.py</text>
+              <text x="540" y="173" text-anchor="middle" fill="#3fb950" font-size="9" font-family="sans-serif">✓ image built</text>
 
-        <rect x="155" y="225" width="130" height="55" rx="8" fill="#21262d" stroke="#30363d" stroke-width="1.5"/>
-        <text x="220" y="246" text-anchor="middle" fill="#8b949e" font-size="10">GitHub Repo</text>
-        <text x="220" y="264" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="600">ProjectX-ArgoCD</text>
-        <text x="220" y="278" text-anchor="middle" fill="#8b949e" font-size="10">helm chart / values</text>
+              <!-- 4: Push to AR -->
+              <rect x="678" y="70" width="185" height="110" rx="8" fill="#21262d" stroke="#f0883e" stroke-width="1.5"/>
+              <text x="770" y="92" text-anchor="middle" fill="#f0883e" font-size="10.5" font-family="sans-serif" font-weight="600">4. docker push → AR</text>
+              <text x="770" y="110" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Artifact Registry</text>
+              <text x="770" y="126" text-anchor="middle" fill="#e6edf3" font-size="8.5" font-family="sans-serif">...projectx-api:a1b2c3d4</text>
+              <text x="770" y="142" text-anchor="middle" fill="#e6edf3" font-size="8.5" font-family="sans-serif">...projectx-api:latest</text>
+              <text x="770" y="158" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">tag = first 8 of git SHA</text>
+              <text x="770" y="173" text-anchor="middle" fill="#3fb950" font-size="9" font-family="sans-serif">✓ image available</text>
 
-        <!-- Arrow: dev → repos -->
-        <line x1="110" y1="225" x2="152" y2="200" stroke="#8b949e" stroke-width="1.2" marker-end="url(#arrow)"/>
-        <line x1="110" y1="235" x2="152" y2="252" stroke="#8b949e" stroke-width="1.2" marker-end="url(#arrow)"/>
+              <!-- 5: Update values.yaml -->
+              <rect x="918" y="70" width="195" height="110" rx="8" fill="#21262d" stroke="#3fb950" stroke-width="1.5"/>
+              <text x="1015" y="92" text-anchor="middle" fill="#3fb950" font-size="10.5" font-family="sans-serif" font-weight="600">5. Update values.yaml</text>
+              <text x="1015" y="110" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">clone ProjectX-ArgoCD</text>
+              <text x="1015" y="126" text-anchor="middle" fill="#e6edf3" font-size="9" font-family="sans-serif">yq .image.tag = "a1b2c3d4"</text>
+              <text x="1015" y="142" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">git commit + push</text>
+              <text x="1015" y="158" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">via GITOPS_PAT secret</text>
+              <text x="1015" y="173" text-anchor="middle" fill="#3fb950" font-size="9" font-family="sans-serif">✓ GitOps repo updated</text>
 
-        <!-- GCP Box -->
-        <rect x="330" y="60" width="510" height="390" rx="12" fill="none" stroke="#30363d" stroke-width="1.5" stroke-dasharray="6,3"/>
-        <text x="345" y="82" fill="#8b949e" font-size="11">Google Cloud Project</text>
+              <!-- 6: ArgoCD detects -->
+              <rect x="1170" y="70" width="185" height="110" rx="8" fill="#21262d" stroke="#bc8cff" stroke-width="1.5"/>
+              <text x="1262" y="92" text-anchor="middle" fill="#bc8cff" font-size="10.5" font-family="sans-serif" font-weight="600">6. Argo CD sync</text>
+              <text x="1262" y="110" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">detects commit in ~3 min</text>
+              <text x="1262" y="126" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">or force: app sync</text>
+              <text x="1262" y="142" text-anchor="middle" fill="#e6edf3" font-size="9" font-family="sans-serif">rolling update:</text>
+              <text x="1262" y="158" text-anchor="middle" fill="#e6edf3" font-size="9" font-family="sans-serif">new pods → old pods term</text>
+              <text x="1262" y="173" text-anchor="middle" fill="#3fb950" font-size="9" font-family="sans-serif">✓ new version live</text>
 
-        <!-- Artifact Registry -->
-        <rect x="355" y="95" width="150" height="55" rx="8" fill="#21262d" stroke="#f0883e" stroke-width="1.5"/>
-        <text x="430" y="116" text-anchor="middle" fill="#f0883e" font-size="11" font-weight="600">Artifact Registry</text>
-        <text x="430" y="133" text-anchor="middle" fill="#8b949e" font-size="10">Docker images</text>
-        <text x="430" y="147" text-anchor="middle" fill="#8b949e" font-size="10">europe-west3-docker.pkg.dev</text>
+              <!-- Arrows between steps -->
+              <line x1="186" y1="125" x2="229" y2="125" stroke="#8b949e" stroke-width="1.5" marker-end="url(#ci-ah)"/>
+              <line x1="406" y1="125" x2="454" y2="125" stroke="#f0883e" stroke-width="1.5" marker-end="url(#ci-ao)"/>
+              <line x1="626" y1="125" x2="677" y2="125" stroke="#f0883e" stroke-width="1.5" marker-end="url(#ci-ao)"/>
+              <line x1="864" y1="125" x2="917" y2="125" stroke="#3fb950" stroke-width="1.5" marker-end="url(#ci-ag)"/>
+              <line x1="1114" y1="125" x2="1169" y2="125" stroke="#bc8cff" stroke-width="1.5" marker-end="url(#ci-ap)"/>
 
-        <!-- Arrow: ProjectX → AR (docker push) -->
-        <line x1="285" y1="175" x2="352" y2="130" stroke="#f0883e" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow-blue)"/>
-        <text x="305" y="145" fill="#f0883e" font-size="9">docker push</text>
+              <!-- Step labels under arrows -->
+              <text x="217" y="116" fill="#8b949e" font-size="9" font-family="sans-serif">on:push</text>
+              <text x="430" y="116" fill="#f0883e" font-size="9" font-family="sans-serif">build</text>
+              <text x="641" y="116" fill="#f0883e" font-size="9" font-family="sans-serif">push</text>
+              <text x="885" y="116" fill="#3fb950" font-size="9" font-family="sans-serif">commit</text>
+              <text x="1127" y="116" fill="#bc8cff" font-size="9" font-family="sans-serif">detect</text>
 
-        <!-- VPC Box -->
-        <rect x="340" y="165" width="490" height="268" rx="10" fill="none" stroke="#30363d" stroke-width="1.2" stroke-dasharray="4,3"/>
-        <text x="356" y="183" fill="#8b949e" font-size="10">VPC — projectx-vpc</text>
+              <!-- Detailed box: WIF auth detail -->
+              <rect x="30" y="230" width="400" height="145" rx="8" fill="rgba(240,136,62,0.06)" stroke="#30363d" stroke-width="1"/>
+              <text x="230" y="250" text-anchor="middle" fill="#f0883e" font-size="10" font-family="sans-serif" font-weight="600">Workload Identity Federation (keyless auth)</text>
+              <text x="50" y="270" fill="#8b949e" font-size="9" font-family="sans-serif">1. GitHub Actions requests OIDC token from GitHub</text>
+              <text x="50" y="288" fill="#8b949e" font-size="9" font-family="sans-serif">2. Token exchanged at sts.googleapis.com for short-lived GCP token</text>
+              <text x="50" y="306" fill="#8b949e" font-size="9" font-family="sans-serif">3. Validated: token.repository == "DemOnJR/ProjectX"</text>
+              <text x="50" y="324" fill="#8b949e" font-size="9" font-family="sans-serif">4. Impersonates SA: projectx-ci  (roles/artifactregistry.writer)</text>
+              <text x="50" y="342" fill="#3fb950" font-size="9" font-family="sans-serif">✓ No JSON keys stored anywhere. Token expires after job.</text>
+              <text x="50" y="360" fill="#8b949e" font-size="9" font-family="sans-serif">Terraform resources: google_iam_workload_identity_pool + provider + SA + IAM member</text>
 
-        <!-- GKE Cluster Box -->
-        <rect x="360" y="190" width="455" height="225" rx="8" fill="rgba(88,166,255,0.04)" stroke="#58a6ff" stroke-width="1.2"/>
-        <text x="376" y="208" fill="#58a6ff" font-size="11" font-weight="600">GKE Cluster — projectx-gke  (europe-west3)</text>
+              <!-- Detailed box: GitOps update detail -->
+              <rect x="480" y="230" width="420" height="145" rx="8" fill="rgba(63,185,80,0.06)" stroke="#30363d" stroke-width="1"/>
+              <text x="690" y="250" text-anchor="middle" fill="#3fb950" font-size="10" font-family="sans-serif" font-weight="600">Automatic GitOps Update (ci.yml step 5)</text>
+              <text x="500" y="270" fill="#8b949e" font-size="9" font-family="sans-serif">git clone https://x-access-token:$GITOPS_PAT@github.com/DemOnJR/ProjectX-ArgoCD</text>
+              <text x="500" y="288" fill="#e6edf3" font-size="9" font-family="sans-serif">yq e '.image.tag = "a1b2c3d4"' -i apps/projectx-api/values.yaml</text>
+              <text x="500" y="306" fill="#e6edf3" font-size="9" font-family="sans-serif">git commit -m "ci: deploy projectx-api a1b2c3d4"</text>
+              <text x="500" y="324" fill="#e6edf3" font-size="9" font-family="sans-serif">git push</text>
+              <text x="500" y="342" fill="#8b949e" font-size="9" font-family="sans-serif">Only commits if values.yaml actually changed (git diff --staged --quiet)</text>
+              <text x="500" y="360" fill="#8b949e" font-size="9" font-family="sans-serif">GITOPS_PAT = GitHub secret (repo scope PAT)</text>
 
-        <!-- ArgoCD namespace -->
-        <rect x="375" y="215" width="175" height="90" rx="6" fill="#21262d" stroke="#bc8cff" stroke-width="1.2"/>
-        <text x="462" y="233" text-anchor="middle" fill="#bc8cff" font-size="10" font-weight="600">ns: argocd</text>
-        <rect x="390" y="240" width="145" height="30" rx="4" fill="#161b22" stroke="#30363d"/>
-        <text x="462" y="260" text-anchor="middle" fill="#e6edf3" font-size="10">Argo CD (Helm)</text>
-        <rect x="390" y="278" width="145" height="20" rx="4" fill="#161b22" stroke="#30363d"/>
-        <text x="462" y="293" text-anchor="middle" fill="#8b949e" font-size="9">Application CR → projectx-api</text>
+              <!-- Detailed box: ArgoCD sync detail -->
+              <rect x="950" y="230" width="400" height="145" rx="8" fill="rgba(188,140,255,0.06)" stroke="#30363d" stroke-width="1"/>
+              <text x="1150" y="250" text-anchor="middle" fill="#bc8cff" font-size="10" font-family="sans-serif" font-weight="600">Argo CD Sync (automated)</text>
+              <text x="970" y="270" fill="#8b949e" font-size="9" font-family="sans-serif">syncPolicy.automated.prune = true   (removes deleted resources)</text>
+              <text x="970" y="288" fill="#8b949e" font-size="9" font-family="sans-serif">syncPolicy.automated.selfHeal = true (reverts manual kubectl changes)</text>
+              <text x="970" y="306" fill="#8b949e" font-size="9" font-family="sans-serif">Polls every ~3 min  OR  force: kubectl patch application ...</text>
+              <text x="970" y="324" fill="#8b949e" font-size="9" font-family="sans-serif">Rolling update: new pods ready first, then old pods terminate</text>
+              <text x="970" y="342" fill="#8b949e" font-size="9" font-family="sans-serif">Health: readinessProbe + livenessProbe → /healthz on port 8000</text>
+              <text x="970" y="360" fill="#3fb950" font-size="9" font-family="sans-serif">✓ Zero downtime deployment</text>
 
-        <!-- projectx namespace -->
-        <rect x="575" y="215" width="220" height="185" rx="6" fill="#21262d" stroke="#3fb950" stroke-width="1.2"/>
-        <text x="685" y="233" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">ns: projectx</text>
-        <rect x="590" y="240" width="190" height="30" rx="4" fill="#161b22" stroke="#30363d"/>
-        <text x="685" y="260" text-anchor="middle" fill="#e6edf3" font-size="10">Deployment: projectx-api</text>
-        <rect x="590" y="278" width="190" height="24" rx="4" fill="#161b22" stroke="#30363d"/>
-        <text x="685" y="294" text-anchor="middle" fill="#8b949e" font-size="9">HPA (2–10 replicas)</text>
-        <rect x="590" y="310" width="190" height="24" rx="4" fill="#161b22" stroke="#30363d"/>
-        <text x="685" y="326" text-anchor="middle" fill="#8b949e" font-size="9">Service: ClusterIP :80</text>
-        <rect x="590" y="342" width="190" height="24" rx="4" fill="#161b22" stroke="#30363d"/>
-        <text x="685" y="358" text-anchor="middle" fill="#8b949e" font-size="9">Cloudflare Tunnel (optional)</text>
-        <rect x="590" y="374" width="190" height="20" rx="4" fill="#161b22" stroke="#30363d"/>
-        <text x="685" y="389" text-anchor="middle" fill="#8b949e" font-size="9">VSO Secrets (optional)</text>
+              <!-- Total time label -->
+              <rect x="30" y="420" width="1330" height="40" rx="6" fill="rgba(63,185,80,0.06)" stroke="#30363d"/>
+              <text x="695" y="438" text-anchor="middle" fill="#8b949e" font-size="10" font-family="sans-serif">⏱  Typical total time:  ~3–5 min  (build ~1 min · push ~1 min · CI overhead ~1 min · ArgoCD poll ~3 min)</text>
+              <text x="695" y="455" text-anchor="middle" fill="#3fb950" font-size="10" font-family="sans-serif">From  git push  →  new version live in GKE</text>
 
-        <!-- ArgoCD → GKE syncs -->
-        <line x1="550" y1="260" x2="572" y2="260" stroke="#3fb950" stroke-width="1.5" marker-end="url(#arrow-green)"/>
-        <text x="554" y="253" fill="#3fb950" font-size="8">sync</text>
-
-        <!-- ArgoCD watches GitOps repo -->
-        <path d="M 462 215 Q 462 160 287 253" fill="none" stroke="#bc8cff" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#arrow-blue)"/>
-        <text x="340" y="180" fill="#bc8cff" font-size="9">watches</text>
-
-        <!-- Nodes at bottom -->
-        <rect x="375" y="320" width="175" height="50" rx="6" fill="#21262d" stroke="#30363d" stroke-width="1"/>
-        <text x="462" y="340" text-anchor="middle" fill="#8b949e" font-size="10">Node Pool (e2-standard-2)</text>
-        <text x="462" y="357" text-anchor="middle" fill="#8b949e" font-size="9">autoscaling 1–4 per zone</text>
-        <text x="462" y="369" text-anchor="middle" fill="#8b949e" font-size="9">zones: -a, -b</text>
-
-        <!-- Terraform label -->
-        <rect x="10" y="90" width="115" height="40" rx="6" fill="#21262d" stroke="#f0883e" stroke-width="1.2"/>
-        <text x="67" y="107" text-anchor="middle" fill="#f0883e" font-size="10" font-weight="600">Terraform</text>
-        <text x="67" y="122" text-anchor="middle" fill="#8b949e" font-size="9">infra/terraform/</text>
-        <line x1="125" y1="110" x2="328" y2="130" stroke="#f0883e" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow-blue)"/>
-        <text x="195" y="108" fill="#f0883e" font-size="9">provisions</text>
-
-        <!-- AR → GKE nodes pull -->
-        <line x1="430" y1="150" x2="430" y2="212" stroke="#f0883e" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arrow-blue)"/>
-        <text x="435" y="185" fill="#f0883e" font-size="8">pull image</text>
-      </svg>
-    </div>
-
-    <h3>GitOps Flow</h3>
-    <div class="flow">
-      <span class="flow-item">1. Edit app code</span>
-      <span class="flow-arrow">→</span>
-      <span class="flow-item">2. Build &amp; push image</span>
-      <span class="flow-arrow">→</span>
-      <span class="flow-item">3. Update image tag in values.yaml</span>
-      <span class="flow-arrow">→</span>
-      <span class="flow-item">4. Git push to ProjectX-ArgoCD</span>
-      <span class="flow-arrow">→</span>
-      <span class="flow-item">5. Argo CD detects change</span>
-      <span class="flow-arrow">→</span>
-      <span class="flow-item">6. Argo CD syncs cluster ✓</span>
-    </div>
-
-    <h3>What Terraform Creates</h3>
-    <div class="card-grid">
-      <div class="card">
-        <span class="badge badge-orange">GCP</span>
-        <h3>APIs Enabled</h3>
-        <ul class="checklist">
-          <li>Artifact Registry API</li>
-          <li>Compute Engine API</li>
-          <li>Kubernetes Engine API</li>
-          <li>IAM API</li>
-        </ul>
-      </div>
-      <div class="card">
-        <span class="badge badge-blue">Network</span>
-        <h3>VPC</h3>
-        <ul class="checklist">
-          <li>VPC — <code>projectx-vpc</code></li>
-          <li>Subnet 10.10.0.0/20</li>
-          <li>Pods range 10.20.0.0/16</li>
-          <li>Services range 10.30.0.0/20</li>
-        </ul>
-      </div>
-      <div class="card">
-        <span class="badge badge-yellow">Compute</span>
-        <h3>GKE Cluster</h3>
-        <ul class="checklist">
-          <li>Regional cluster (europe-west3)</li>
-          <li>Dedicated node service account</li>
-          <li>Node pool with autoscaling</li>
-          <li>Network policy enabled</li>
-        </ul>
-      </div>
-      <div class="card">
-        <span class="badge badge-green">IAM</span>
-        <h3>Permissions</h3>
-        <ul class="checklist">
-          <li>GKE node SA → AR reader</li>
-          <li>(nodes can pull images)</li>
-        </ul>
-      </div>
-      <div class="card">
-        <span class="badge badge-purple">Apps</span>
-        <h3>Helm Releases</h3>
-        <ul class="checklist">
-          <li>Argo CD (namespace: argocd)</li>
-          <li>argocd-apps (Application CR)</li>
-          <li>Vault Secrets Operator (optional)</li>
-        </ul>
-      </div>
-      <div class="card">
-        <span class="badge badge-orange">Registry</span>
-        <h3>Artifact Registry</h3>
-        <ul class="checklist">
-          <li>Docker repository: <code>projectx</code></li>
-          <li>Region: europe-west3</li>
-        </ul>
+              <!-- Trigger filter note -->
+              <rect x="30" y="480" width="620" height="35" rx="5" fill="rgba(88,166,255,0.06)" stroke="#30363d"/>
+              <text x="340" y="496" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Workflow only triggers when  app/**  changes</text>
+              <text x="340" y="508" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">Pushes to infra/terraform/ or presentation.html do NOT trigger a build — saves time and cost</text>
+            </g>
+          </svg>
+        </div>
       </div>
     </div>
-  </section>
 
-  <!-- GCP First-Time Setup -->
-  <section id="gcp-setup">
-    <h2>First-Time GCP Setup</h2>
-    <p>Complete these steps once when setting up a brand-new Google Cloud project. Everything is in order — run them top to bottom.</p>
+    <!-- ── Panel 3: Vault & Secrets ── -->
+    <div id="p-vault" class="diagram-panel">
+      <div class="diagram-wrap">
+        <div class="diagram-controls">
+          <span class="diagram-hint">scroll · drag</span>
+          <button data-action="zoomin">+</button>
+          <button data-action="zoomout">−</button>
+          <button data-action="reset">⊙</button>
+        </div>
+        <div class="canvas-container" id="cc-vault">
+          <svg id="svg-vault" viewBox="0 0 1400 680" xmlns="http://www.w3.org/2000/svg" style="width:1400px;height:680px">
+            <defs>
+              <marker id="va-ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#8b949e"/></marker>
+              <marker id="va-ay" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#d29922"/></marker>
+              <marker id="va-ag" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#3fb950"/></marker>
+              <marker id="va-ab" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#58a6ff"/></marker>
+            </defs>
+            <g id="g-vault">
+              <rect width="1400" height="680" fill="#0d1117"/>
+              <text x="700" y="32" text-anchor="middle" fill="#8b949e" font-size="13" font-family="sans-serif" font-weight="600">Vault Integration — Secret Management Flow</text>
 
-    <h3>Step 0 — Install Required Tools</h3>
-    <div class="card">
-      <table>
-        <thead><tr><th>Tool</th><th>Install</th><th>Version</th></tr></thead>
-        <tbody>
-          <tr><td><code>gcloud</code></td><td><a href="https://cloud.google.com/sdk/docs/install" target="_blank">cloud.google.com/sdk</a></td><td>latest</td></tr>
-          <tr><td><code>terraform</code></td><td><a href="https://developer.hashicorp.com/terraform/install" target="_blank">developer.hashicorp.com/terraform</a></td><td>≥ 1.5.0</td></tr>
-          <tr><td><code>docker</code></td><td><a href="https://docs.docker.com/get-docker/" target="_blank">docs.docker.com</a></td><td>any recent</td></tr>
-          <tr><td><code>kubectl</code></td><td><a href="https://kubernetes.io/docs/tasks/tools/" target="_blank">kubernetes.io</a></td><td>any recent</td></tr>
-        </tbody>
-      </table>
+              <!-- ── terraform-vault ── -->
+              <rect x="20" y="55" width="290" height="340" rx="8" fill="rgba(240,136,62,0.06)" stroke="#f0883e" stroke-width="1.5"/>
+              <text x="165" y="76" text-anchor="middle" fill="#f0883e" font-size="10.5" font-family="sans-serif" font-weight="600">infra/terraform-vault/  (run once)</text>
+
+              <rect x="35" y="87" width="260" height="35" rx="5" fill="#21262d" stroke="#30363d"/>
+              <text x="165" y="103" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-family="sans-serif" font-weight="600">terraform.tfvars  (gitignored)</text>
+              <text x="165" y="116" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">cloudflare_projectx_token = "eyJ..."</text>
+
+              <rect x="35" y="131" width="260" height="55" rx="5" fill="#21262d" stroke="#30363d"/>
+              <text x="165" y="148" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-family="sans-serif" font-weight="600">vault_kv_secret_v2.projectx</text>
+              <text x="165" y="163" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">writes  kv/projectx  { token: "eyJ..." }</text>
+              <text x="165" y="177" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">to vault.pbcv.dev</text>
+
+              <rect x="35" y="196" width="260" height="55" rx="5" fill="#21262d" stroke="#30363d"/>
+              <text x="165" y="213" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-family="sans-serif" font-weight="600">vault_auth_backend.kubernetes</text>
+              <text x="165" y="228" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">type: kubernetes  path: kubernetes/</text>
+              <text x="165" y="243" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">kubernetes_host = GKE endpoint</text>
+
+              <rect x="35" y="261" width="260" height="55" rx="5" fill="#21262d" stroke="#30363d"/>
+              <text x="165" y="278" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-family="sans-serif" font-weight="600">vault_kubernetes_auth_backend_role</text>
+              <text x="165" y="293" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">role: projectx-api</text>
+              <text x="165" y="308" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">SA: projectx-vault-auth  ns: projectx</text>
+
+              <rect x="35" y="326" width="260" height="40" rx="5" fill="#21262d" stroke="#30363d"/>
+              <text x="165" y="343" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-family="sans-serif" font-weight="600">vault_policy.projectx-api</text>
+              <text x="165" y="358" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">path "kv/data/projectx" { read }</text>
+
+              <!-- ── HashiCorp Vault ── -->
+              <rect x="370" y="55" width="280" height="340" rx="8" fill="rgba(210,153,34,0.07)" stroke="#d29922" stroke-width="1.5"/>
+              <text x="510" y="76" text-anchor="middle" fill="#d29922" font-size="10.5" font-family="sans-serif" font-weight="600">vault.pbcv.dev</text>
+
+              <rect x="385" y="87" width="250" height="45" rx="5" fill="#21262d" stroke="#30363d"/>
+              <text x="510" y="104" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-family="sans-serif" font-weight="600">KV v2 Secrets Engine  (kv/)</text>
+              <text x="510" y="119" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">kv/data/projectx  →  { token: "eyJ..." }</text>
+
+              <rect x="385" y="143" width="250" height="45" rx="5" fill="#21262d" stroke="#30363d"/>
+              <text x="510" y="160" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-family="sans-serif" font-weight="600">Kubernetes Auth Backend</text>
+              <text x="510" y="175" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">verifies pod SA JWT against GKE CA cert</text>
+
+              <rect x="385" y="199" width="250" height="60" rx="5" fill="#21262d" stroke="#30363d"/>
+              <text x="510" y="216" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-family="sans-serif" font-weight="600">Auth Flow</text>
+              <text x="510" y="231" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">POST /v1/auth/kubernetes/login</text>
+              <text x="510" y="246" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">{ jwt: &lt;pod SA token&gt;, role: "projectx-api" }</text>
+              <text x="510" y="257" text-anchor="middle" fill="#d29922" font-size="9" font-family="sans-serif">→ returns short-lived Vault token</text>
+
+              <rect x="385" y="270" width="250" height="45" rx="5" fill="#21262d" stroke="#30363d"/>
+              <text x="510" y="287" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-family="sans-serif" font-weight="600">Policy Check</text>
+              <text x="510" y="302" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">policy: projectx-api</text>
+              <text x="510" y="315" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">allows: read kv/data/projectx</text>
+
+              <rect x="385" y="326" width="250" height="40" rx="5" fill="#21262d" stroke="#30363d"/>
+              <text x="510" y="343" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-family="sans-serif" font-weight="600">Secret Response</text>
+              <text x="510" y="358" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">{ "token": "eyJhIjoiNmZm..." }</text>
+
+              <!-- ── VSO ── -->
+              <rect x="710" y="55" width="260" height="340" rx="8" fill="rgba(88,166,255,0.06)" stroke="#58a6ff" stroke-width="1.5"/>
+              <text x="840" y="76" text-anchor="middle" fill="#58a6ff" font-size="10.5" font-family="sans-serif" font-weight="600">Vault Secrets Operator  (vso ns)</text>
+
+              <rect x="725" y="87" width="230" height="50" rx="5" fill="#21262d" stroke="#30363d"/>
+              <text x="840" y="104" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-family="sans-serif" font-weight="600">VaultConnection CR</text>
+              <text x="840" y="119" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">address: https://vault.pbcv.dev</text>
+
+              <rect x="725" y="147" width="230" height="65" rx="5" fill="#21262d" stroke="#30363d"/>
+              <text x="840" y="164" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-family="sans-serif" font-weight="600">VaultAuth CR</text>
+              <text x="840" y="179" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">method: kubernetes</text>
+              <text x="840" y="194" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">mount: kubernetes</text>
+              <text x="840" y="207" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">serviceAccount: projectx-vault-auth</text>
+
+              <rect x="725" y="222" width="230" height="100" rx="5" fill="#21262d" stroke="#30363d"/>
+              <text x="840" y="239" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-family="sans-serif" font-weight="600">VaultStaticSecret CR</text>
+              <text x="840" y="254" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">type: kv-v2</text>
+              <text x="840" y="269" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">mount: kv  path: projectx</text>
+              <text x="840" y="284" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">refreshAfter: 1h</text>
+              <text x="840" y="299" text-anchor="middle" fill="#d29922" font-size="9" font-family="sans-serif">destination: cloudflared-token</text>
+              <text x="840" y="314" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">template: token = .Secrets.token</text>
+
+              <rect x="725" y="332" width="230" height="40" rx="5" fill="#21262d" stroke="#30363d"/>
+              <text x="840" y="349" text-anchor="middle" fill="#8b949e" font-size="9.5" font-family="sans-serif">Reconciliation loop (every refreshAfter)</text>
+              <text x="840" y="363" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">creates/updates K8s secret on change</text>
+
+              <!-- ── K8s Secret ── -->
+              <rect x="1040" y="55" width="240" height="120" rx="8" fill="rgba(210,153,34,0.07)" stroke="#d29922" stroke-width="1.5"/>
+              <text x="1160" y="76" text-anchor="middle" fill="#d29922" font-size="10.5" font-family="sans-serif" font-weight="600">K8s Secret</text>
+              <text x="1160" y="92" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">name: cloudflared-token</text>
+              <text x="1160" y="107" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">namespace: projectx</text>
+              <rect x="1055" y="114" width="210" height="28" rx="4" fill="#161b22" stroke="#30363d"/>
+              <text x="1160" y="132" text-anchor="middle" fill="#3fb950" font-size="9" font-family="sans-serif">data: { token: base64(eyJ...) }</text>
+              <text x="1160" y="165" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">owned by VSO · auto-refreshed</text>
+
+              <!-- ── cloudflared Pod ── -->
+              <rect x="1040" y="210" width="240" height="115" rx="8" fill="rgba(243,128,32,0.07)" stroke="#f38020" stroke-width="1.5"/>
+              <text x="1160" y="231" text-anchor="middle" fill="#f38020" font-size="10.5" font-family="sans-serif" font-weight="600">cloudflared Pod</text>
+              <text x="1160" y="248" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">image: cloudflare/cloudflared:2025.2.1</text>
+              <text x="1160" y="263" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">args: tunnel run --token $(TUNNEL_TOKEN)</text>
+              <rect x="1055" y="270" width="210" height="25" rx="4" fill="#161b22" stroke="#30363d"/>
+              <text x="1160" y="287" text-anchor="middle" fill="#e6edf3" font-size="9" font-family="sans-serif">env.TUNNEL_TOKEN ← secretKeyRef</text>
+              <text x="1160" y="312" text-anchor="middle" fill="#3fb950" font-size="9" font-family="sans-serif">→ connects to Cloudflare → HTTPS</text>
+
+              <!-- ── ServiceAccount ── -->
+              <rect x="1040" y="360" width="240" height="70" rx="8" fill="rgba(88,166,255,0.06)" stroke="#30363d" stroke-width="1"/>
+              <text x="1160" y="379" text-anchor="middle" fill="#58a6ff" font-size="10" font-family="sans-serif" font-weight="600">ServiceAccount</text>
+              <text x="1160" y="395" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">name: projectx-vault-auth</text>
+              <text x="1160" y="410" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">namespace: projectx</text>
+              <text x="1160" y="425" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">K8s injects JWT into pod filesystem</text>
+
+              <!-- ARROWS -->
+              <!-- terraform-vault → Vault (writes secret + config) -->
+              <line x1="311" y1="200" x2="369" y2="200" stroke="#f0883e" stroke-width="1.5" marker-end="url(#va-ah)"/>
+              <text x="318" y="194" fill="#f0883e" font-size="9" font-family="sans-serif">writes</text>
+              <line x1="311" y1="295" x2="369" y2="295" stroke="#f0883e" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#va-ah)"/>
+              <text x="318" y="288" fill="#f0883e" font-size="9" font-family="sans-serif">config</text>
+
+              <!-- VSO → Vault (auth + read) -->
+              <line x1="710" y1="180" x2="636" y2="180" stroke="#d29922" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#va-ay)"/>
+              <text x="638" y="173" fill="#d29922" font-size="9" font-family="sans-serif">1. auth</text>
+              <line x1="710" y1="250" x2="636" y2="345" stroke="#d29922" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#va-ay)"/>
+              <text x="638" y="318" fill="#d29922" font-size="9" font-family="sans-serif">2. read secret</text>
+
+              <!-- VSO → K8s Secret -->
+              <line x1="956" y1="280" x2="1039" y2="115" stroke="#3fb950" stroke-width="1.5" marker-end="url(#va-ag)"/>
+              <text x="975" y="195" fill="#3fb950" font-size="9" font-family="sans-serif">creates/updates</text>
+              <text x="975" y="207" fill="#3fb950" font-size="9" font-family="sans-serif">K8s Secret</text>
+
+              <!-- K8s Secret → cloudflared Pod -->
+              <line x1="1160" y1="175" x2="1160" y2="209" stroke="#d29922" stroke-width="1.5" marker-end="url(#va-ay)"/>
+              <text x="1165" y="198" fill="#d29922" font-size="9" font-family="sans-serif">env inject</text>
+
+              <!-- SA → VaultAuth (SA JWT used) -->
+              <line x1="1100" y1="360" x2="840" y2="212" stroke="#58a6ff" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#va-ab)"/>
+              <text x="950" y="283" fill="#58a6ff" font-size="9" font-family="sans-serif">pod SA JWT token</text>
+
+              <!-- Rotation note -->
+              <rect x="370" y="430" width="880" height="80" rx="8" fill="rgba(63,185,80,0.06)" stroke="#30363d"/>
+              <text x="810" y="452" text-anchor="middle" fill="#3fb950" font-size="10.5" font-family="sans-serif" font-weight="600">Secret Rotation (zero-downtime)</text>
+              <text x="810" y="470" text-anchor="middle" fill="#8b949e" font-size="9.5" font-family="sans-serif">1. Update token in Vault:  vault kv put kv/projectx token="eyJ_NEW..."</text>
+              <text x="810" y="487" text-anchor="middle" fill="#8b949e" font-size="9.5" font-family="sans-serif">2. VSO detects change on next reconcile (refreshAfter: 1h)  OR  annotate VaultStaticSecret to force immediate sync</text>
+              <text x="810" y="504" text-anchor="middle" fill="#8b949e" font-size="9.5" font-family="sans-serif">3. K8s Secret updated  →  cloudflared pod picks up new token  →  no restart needed</text>
+
+              <!-- Setup order note -->
+              <rect x="20" y="430" width="340" height="80" rx="8" fill="rgba(88,166,255,0.06)" stroke="#30363d"/>
+              <text x="190" y="450" text-anchor="middle" fill="#58a6ff" font-size="10" font-family="sans-serif" font-weight="600">Setup Order</text>
+              <text x="30" y="467" fill="#8b949e" font-size="9" font-family="sans-serif">1. terraform apply (main)  →  GKE + VSO up</text>
+              <text x="30" y="482" fill="#8b949e" font-size="9" font-family="sans-serif">2. export VAULT_TOKEN=xxx</text>
+              <text x="30" y="497" fill="#8b949e" font-size="9" font-family="sans-serif">3. terraform apply (terraform-vault)  →  Vault configured</text>
+              <text x="30" y="512" fill="#3fb950" font-size="9" font-family="sans-serif">4. Enable vault: true in values.yaml + push  →  done</text>
+            </g>
+          </svg>
+        </div>
+      </div>
     </div>
+  </div>
+</section>
 
-    <h3>Step 1 — Log in to gcloud</h3>
-    <pre><code># Authenticate your Google account with gcloud
-gcloud auth login
+<!-- ══════════════════════════════════════════════════════════ GCP SETUP -->
+<section id="gcp-setup">
+  <h2>First-Time GCP Setup</h2>
+  <p>Complete these steps once when starting from scratch. Run them top to bottom.</p>
 
-# Verify the correct account is active
-gcloud auth list</code></pre>
+  <h3>Step 0 — Install Tools</h3>
+  <div class="card">
+    <table>
+      <thead><tr><th>Tool</th><th>Install</th><th>Required version</th></tr></thead>
+      <tbody>
+        <tr><td><code>gcloud</code></td><td><a href="https://cloud.google.com/sdk/docs/install" target="_blank">cloud.google.com/sdk</a></td><td>latest</td></tr>
+        <tr><td><code>terraform</code></td><td><a href="https://developer.hashicorp.com/terraform/install" target="_blank">developer.hashicorp.com/terraform</a></td><td>≥ 1.5.0</td></tr>
+        <tr><td><code>docker</code></td><td><a href="https://docs.docker.com/get-docker/" target="_blank">docs.docker.com</a></td><td>any recent</td></tr>
+        <tr><td><code>kubectl</code></td><td><a href="https://kubernetes.io/docs/tasks/tools/" target="_blank">kubernetes.io</a></td><td>any recent</td></tr>
+      </tbody>
+    </table>
+  </div>
 
-    <h3>Step 2 — Create the GCP Project</h3>
-    <pre><code>export PROJECT_ID="my-projectx-123456"   # choose a unique project ID
+  <h3>Step 1 — Login</h3>
+  <pre><code>gcloud auth login
+gcloud auth list   # verify correct account is active</code></pre>
 
+  <h3>Step 2 — Create Project</h3>
+  <pre><code>export PROJECT_ID="my-projectx-123456"
 gcloud projects create $PROJECT_ID --name="ProjectX"
-
-# Confirm it was created
 gcloud projects describe $PROJECT_ID</code></pre>
-    <div class="note">
-      <p>Project IDs must be globally unique across all of Google Cloud, 6–30 characters, lowercase letters/numbers/hyphens only.</p>
-    </div>
+  <div class="note"><p>Project IDs must be globally unique, 6–30 chars, lowercase letters/numbers/hyphens only.</p></div>
 
-    <h3>Step 3 — Link a Billing Account</h3>
-    <pre><code># List your billing accounts to find the ID
-gcloud billing accounts list
+  <h3>Step 3 — Link Billing</h3>
+  <pre><code>gcloud billing accounts list
+gcloud billing projects link $PROJECT_ID --billing-account=XXXXXX-XXXXXX-XXXXXX</code></pre>
+  <div class="warn"><p>GKE requires an active billing account. You will get <code>FAILED_PRECONDITION</code> without it.</p></div>
 
-# Link the billing account to the project
-gcloud billing projects link $PROJECT_ID \
-  --billing-account=XXXXXX-XXXXXX-XXXXXX</code></pre>
-    <div class="warn">
-      <p>GKE cannot be created without an active billing account. You will get a <code>FAILED_PRECONDITION</code> error if billing is not linked.</p>
-    </div>
+  <h3>Step 4 — Set Active Project</h3>
+  <pre><code>gcloud config set project $PROJECT_ID</code></pre>
 
-    <h3>Step 4 — Set the Active Project</h3>
-    <pre><code>gcloud config set project $PROJECT_ID</code></pre>
+  <h3>Step 5 — Application Default Credentials (Terraform)</h3>
+  <pre><code>gcloud auth application-default login</code></pre>
+  <div class="note"><p>This is separate from <code>gcloud auth login</code>. Terraform uses ADC, not your CLI session.</p></div>
 
-    <h3>Step 5 — Set Application Default Credentials (for Terraform)</h3>
-    <pre><code>gcloud auth application-default login</code></pre>
-    <div class="note">
-      <p>Terraform uses <strong>Application Default Credentials</strong> (ADC) — not your <code>gcloud auth login</code> session. This separate command is required. Do not set <code>GOOGLE_APPLICATION_CREDENTIALS</code> unless you intentionally use a service account key file.</p>
-    </div>
-
-    <h3>Step 6 — Grant Your Account the Required IAM Roles</h3>
-    <pre><code>export ACCOUNT="your-email@gmail.com"
-
+  <h3>Step 6 — Grant IAM Roles</h3>
+  <pre><code>export ACCOUNT="your-email@gmail.com"
 gcloud projects add-iam-policy-binding $PROJECT_ID \
   --member="user:$ACCOUNT" --role="roles/owner"</code></pre>
-    <div class="tip">
-      <p><strong>Minimal roles</strong> if you cannot use <code>roles/owner</code>: <code>roles/container.admin</code>, <code>roles/compute.networkAdmin</code>, <code>roles/artifactregistry.admin</code>, <code>roles/iam.serviceAccountAdmin</code>, <code>roles/resourcemanager.projectIamAdmin</code>, <code>roles/serviceusage.serviceUsageAdmin</code>.</p>
-    </div>
+  <div class="tip"><p><strong>Minimal roles</strong> (no owner): <code>roles/container.admin</code>, <code>roles/compute.networkAdmin</code>, <code>roles/artifactregistry.admin</code>, <code>roles/iam.serviceAccountAdmin</code>, <code>roles/resourcemanager.projectIamAdmin</code>, <code>roles/serviceusage.serviceUsageAdmin</code>, <code>roles/iam.workloadIdentityPoolAdmin</code>.</p></div>
 
-    <h3>Step 7 — Enable Service Usage API (if not already on)</h3>
-    <p>This API is required for Terraform to enable other APIs. It is on by default for new projects but worth confirming:</p>
-    <pre><code>gcloud services enable serviceusage.googleapis.com --project=$PROJECT_ID</code></pre>
+  <h3>Step 7 — Enable Service Usage API</h3>
+  <pre><code>gcloud services enable serviceusage.googleapis.com --project=$PROJECT_ID</code></pre>
 
-    <h3>Step 8 — (Optional) Pre-enable GCP APIs</h3>
-    <p>Terraform does this automatically when <code>manage_project_services = true</code>. Run manually only if your account lacks Service Usage permissions:</p>
-    <pre><code>gcloud services enable \
-  artifactregistry.googleapis.com \
-  compute.googleapis.com \
-  container.googleapis.com \
-  iam.googleapis.com \
-  --project=$PROJECT_ID</code></pre>
+  <h3>Step 8 — (Optional) Pre-enable APIs</h3>
+  <p>Terraform does this automatically. Run only if your account cannot manage Service Usage:</p>
+  <pre><code>gcloud services enable \
+  artifactregistry.googleapis.com compute.googleapis.com \
+  container.googleapis.com iam.googleapis.com \
+  iamcredentials.googleapis.com --project=$PROJECT_ID</code></pre>
+  <div class="tip"><p>All done — continue to Deploy below.</p></div>
+</section>
 
-    <div class="tip">
-      <p><strong>All done.</strong> You can now continue to the Deploy section below.</p>
-    </div>
-  </section>
+<!-- ══════════════════════════════════════════════════════════ DEPLOY -->
+<section id="deploy">
+  <h2>Deploy with Terraform</h2>
+  <div class="steps">
+    <div class="step"><div class="step-body"><p><strong>Set <code>github_repo</code> and project ID</strong> in <code>infra/terraform/terraform.tfvars</code>:</p>
+    <pre><code>gcp_project_id = "YOUR_PROJECT_ID"
+github_repo    = "YOUR_USERNAME/ProjectX"
+gitops_repo_url = "https://github.com/YOUR_USERNAME/ProjectX-ArgoCD.git"</code></pre></div></div>
+    <div class="step"><div class="step-body"><p><strong>Init and apply</strong> (~15 min first time):</p>
+    <pre><code>cd ProjectX/infra/terraform
+terraform init
+terraform apply</code></pre></div></div>
+    <div class="step"><div class="step-body"><p><strong>Note the outputs</strong> — you'll need them for CI setup:</p>
+    <pre><code>terraform output ci_wif_provider
+terraform output ci_service_account
+terraform output artifact_registry_repository</code></pre></div></div>
+    <div class="step"><div class="step-body"><p><strong>Configure kubectl:</strong></p>
+    <pre><code>gcloud container clusters get-credentials projectx-gke \
+  --region europe-west3 --project YOUR_PROJECT_ID</code></pre></div></div>
+  </div>
+  <div class="tip"><p><strong>Next steps in order:</strong> Build &amp; push Docker image → Set up CI → (optional) Cloudflare tunnels → (optional) Vault → Access Argo CD</p></div>
+</section>
 
-  <!-- Deploy -->
-  <section id="deploy">
-    <h2>Deploy with Terraform</h2>
-
-    <div class="steps">
-      <div class="step">
-        <div class="step-body">
-          <p><strong>Fork or clone both repos</strong> so you have your own copies to push changes to.</p>
-          <pre><code>git clone https://github.com/YOUR_USERNAME/ProjectX.git
-git clone https://github.com/YOUR_USERNAME/ProjectX-ArgoCD.git</code></pre>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-body">
-          <p><strong>Create your variables file</strong> from the example template.</p>
-          <pre><code>cd ProjectX/infra/terraform
-cp terraform.tfvars.example terraform.tfvars</code></pre>
-          <p>Edit <code>terraform.tfvars</code> and set at minimum:</p>
-          <pre><code>gcp_project_id = "YOUR_PROJECT_ID"
-gitops_repo_url = "https://github.com/YOUR_USERNAME/ProjectX-ArgoCD.git"</code></pre>
-          <div class="note"><p><code>terraform.tfvars</code> is git-ignored so your credentials stay local.</p></div>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-body">
-          <p><strong>Initialise Terraform</strong> — downloads providers and modules.</p>
-          <pre><code>terraform init</code></pre>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-body">
-          <p><strong>Review the plan</strong> — verify what will be created before spending money.</p>
-          <pre><code>terraform plan</code></pre>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-body">
-          <p><strong>Apply</strong> — this provisions the full stack (~15–20 min first time).</p>
-          <pre><code>terraform apply</code></pre>
-          <div class="tip"><p>After apply, Terraform prints useful outputs: cluster credentials command, Artifact Registry URL, Argo CD access command, and initial password command.</p></div>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-body">
-          <p><strong>Configure kubectl</strong> — run the command printed by Terraform output <code>get_credentials_command</code>:</p>
-          <pre><code>gcloud container clusters get-credentials projectx-gke \
-  --region europe-west3 --project YOUR_PROJECT_ID</code></pre>
-        </div>
-      </div>
-    </div>
-
-    <div class="tip">
-      <p><strong>What to do next (in order):</strong><br>
-      1. Build &amp; push the Docker image (next section)<br>
-      2. Set up Cloudflare Tunnels if you want public access<br>
-      3. Set up Vault integration if you want centralized secret management<br>
-      4. Access Argo CD to verify the app is running</p>
-    </div>
-  </section>
-
-  <!-- Docker Image -->
-  <section id="docker">
-    <h2>Build &amp; Push the Docker Image</h2>
-    <p>The GKE cluster pulls images from Artifact Registry. Build and push the image after <code>terraform apply</code> completes (or whenever you update the app).</p>
-
-    <pre><code>export PROJECT_ID="YOUR_PROJECT_ID"
+<!-- ══════════════════════════════════════════════════════════ DOCKER -->
+<section id="docker">
+  <h2>Build &amp; Push Docker Image (Manual)</h2>
+  <p>Required once before the app can be deployed. After CI is set up this runs automatically.</p>
+  <pre><code>export PROJECT_ID="YOUR_PROJECT_ID"
 export REGION="europe-west3"
 export IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/projectx/projectx-api:0.1.0"
 
-# Authorise Docker to push to Artifact Registry
 gcloud auth configure-docker "$REGION-docker.pkg.dev"
-
-# Build from the app directory
 docker build -t "$IMAGE" ./app
-
-# Push
 docker push "$IMAGE"</code></pre>
+  <div class="note"><p>After pushing, update <code>image.tag</code> in <code>ProjectX-ArgoCD/apps/projectx-api/values.yaml</code> and commit. ArgoCD will deploy automatically.</p></div>
 
-    <div class="note">
-      <p>After pushing a new image tag, update <code>image.tag</code> in <code>ProjectX-ArgoCD/apps/projectx-api/values.yaml</code> and commit/push. Argo CD will roll out the new version automatically within ~3 minutes.</p>
-    </div>
-
-    <h3>Run Locally (no Docker)</h3>
-    <pre><code>cd ProjectX/app
+  <h3>Run Locally</h3>
+  <pre><code>cd ProjectX/app
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
-# Open http://localhost:8000</code></pre>
-  </section>
+# http://localhost:8000</code></pre>
+</section>
 
-  <!-- ArgoCD -->
-  <section id="argocd">
-    <h2>Accessing Argo CD</h2>
+<!-- ══════════════════════════════════════════════════════════ CI -->
+<section id="ci">
+  <h2>CI — Automated Build &amp; Deploy</h2>
+  <p>After setup, pushing any change to <code>app/</code> on <code>main</code> triggers the full pipeline automatically — no manual steps.</p>
 
-    <div class="steps">
-      <div class="step">
-        <div class="step-body">
-          <p><strong>Get the initial admin password:</strong></p>
-          <pre><code>kubectl -n argocd get secret argocd-initial-admin-secret \
-  -o jsonpath='{.data.password}' | base64 -d && echo</code></pre>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-body">
-          <p><strong>Forward the Argo CD port:</strong></p>
-          <pre><code>kubectl -n argocd port-forward svc/argocd-server 8080:80</code></pre>
-          <p>Open <a href="http://localhost:8080" target="_blank">http://localhost:8080</a> and log in with username <code>admin</code>.</p>
-        </div>
-      </div>
+  <div class="card">
+    <div class="flow">
+      <span class="fi">git push app/</span><span class="fa">→</span>
+      <span class="fi">GitHub Actions</span><span class="fa">→</span>
+      <span class="fi">WIF auth (no keys)</span><span class="fa">→</span>
+      <span class="fi">docker build + push</span><span class="fa">→</span>
+      <span class="fi">update image.tag</span><span class="fa">→</span>
+      <span class="fi">ArgoCD sync</span><span class="fa">→</span>
+      <span class="fi">new version live ✓</span>
     </div>
+    <p style="margin:0.5rem 0 0">Total time: ~3–5 minutes from push to live.</p>
+  </div>
 
-    <h3>Verify the Application</h3>
-    <pre><code># Check Argo CD application status
-kubectl get application -n argocd
+  <h3>Step 1 — Set github_repo and apply Terraform</h3>
+  <p>Already done if you set <code>github_repo = "YOUR_USERNAME/ProjectX"</code> in <code>terraform.tfvars</code> and ran <code>terraform apply</code>. Terraform created the WIF pool, CI service account, and IAM bindings.</p>
 
-# Check pods in the projectx namespace
-kubectl get pods -n projectx
+  <h3>Step 2 — Create a GitHub PAT (for GitOps commits)</h3>
+  <p>Go to <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens/new</a> → Classic token → <strong><code>repo</code> scope</strong> → Generate. Copy it.</p>
 
-# Check all resources deployed by Argo CD
-kubectl get all -n projectx</code></pre>
+  <h3>Step 3 — Add GitHub Actions Variables &amp; Secret</h3>
+  <p>In your <strong>ProjectX repo</strong> → Settings → Secrets and variables → Actions:</p>
+  <div class="card">
+    <table>
+      <thead><tr><th>Type</th><th>Name</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Variable</td><td><code>WIF_PROVIDER</code></td><td><code>terraform output ci_wif_provider</code></td></tr>
+        <tr><td>Variable</td><td><code>GCP_SERVICE_ACCOUNT</code></td><td><code>terraform output ci_service_account</code></td></tr>
+        <tr><td>Variable</td><td><code>GCP_PROJECT_ID</code></td><td>your GCP project ID</td></tr>
+        <tr><td>Secret</td><td><code>GITOPS_PAT</code></td><td>GitHub PAT from Step 2</td></tr>
+      </tbody>
+    </table>
+  </div>
 
-    <h3>How Argo CD Syncs</h3>
-    <div class="card">
-      <p>Argo CD is configured with <strong>automated sync</strong> (<code>prune: true</code>, <code>selfHeal: true</code>):</p>
-      <ul>
-        <li><strong>prune</strong> — deletes K8s resources that are removed from the Helm chart.</li>
-        <li><strong>selfHeal</strong> — reverts manual changes to the cluster to match the GitOps repo.</li>
-        <li><strong>CreateNamespace</strong> — creates the <code>projectx</code> namespace automatically on first sync.</li>
-      </ul>
-    </div>
+  <h3>Step 4 — Test It</h3>
+  <pre><code># Make any change to app/main.py (e.g. update the hello message)
+git add app/main.py && git commit -m "feat: test CI" && git push origin main
 
-    <h3>Force a Manual Sync</h3>
-    <pre><code>argocd app sync projectx-api
-# or via kubectl
-kubectl patch application projectx-api -n argocd \
-  --type merge -p '{"operation":{"sync":{}}}'</code></pre>
-  </section>
+# Watch the workflow:
+# https://github.com/YOUR_USERNAME/ProjectX/actions
 
-  <!-- Optional Features -->
-  <section id="optional">
-    <h2>Optional Features</h2>
-
-    <h3>Cloudflare Tunnels — Public Access Without a Load Balancer</h3>
-    <p>Cloudflare tunnels let you expose both Argo CD and the ProjectX API on public hostnames without opening firewall ports or paying for GCP Load Balancers. You create two tunnels in the Cloudflare dashboard and paste the tokens into <code>terraform.tfvars</code> — Terraform handles the rest.</p>
-
-    <div class="card-grid">
-      <div class="card">
-        <span class="badge badge-purple">Argo CD</span>
-        <h3>argocd.pbcv.dev</h3>
-        <p>Managed by Terraform directly — a <code>cloudflared</code> Deployment is created in the <code>argocd</code> namespace pointing at <code>argocd-server:80</code>.</p>
-      </div>
-      <div class="card">
-        <span class="badge badge-green">ProjectX API</span>
-        <h3>projectx.pbcv.dev</h3>
-        <p>Managed by Argo CD via the Helm chart. Terraform injects the secret; the chart deploys the tunnel pod when <code>cloudflareTunnel.enabled: true</code>.</p>
-      </div>
-    </div>
-
-    <h3>Step 1 — Create Two Tunnels in Cloudflare</h3>
-    <div class="steps">
-      <div class="step">
-        <div class="step-body">
-          <p>Go to <a href="https://one.dash.cloudflare.com" target="_blank">one.dash.cloudflare.com</a> → <strong>Networks → Tunnels → Create a tunnel</strong>. Choose <em>Cloudflared</em> as the connector type.</p>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-body">
-          <p>Create the <strong>first tunnel</strong> (for Argo CD):</p>
-          <ul>
-            <li>Name: <code>argocd-projectx</code></li>
-            <li>Public hostname: <code>argocd.pbcv.dev</code> → Service: <code>http://argocd-server.argocd.svc.cluster.local:80</code></li>
-          </ul>
-          <p>Copy the tunnel token — you'll use it as <code>argocd_tunnel_token</code>.</p>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-body">
-          <p>Create the <strong>second tunnel</strong> (for the API):</p>
-          <ul>
-            <li>Name: <code>projectx-api</code></li>
-            <li>Public hostname: <code>projectx.pbcv.dev</code> → Service: <code>http://projectx-api.projectx.svc.cluster.local:80</code></li>
-          </ul>
-          <p>Copy the tunnel token — you'll use it as <code>projectx_tunnel_token</code>.</p>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-body">
-          <p>You said you'll add the DNS records yourself (<code>argocd.pbcv.dev</code> and <code>projectx.pbcv.dev</code>) in the Cloudflare dashboard. The tunnel connector will also create them automatically when you configure the public hostname above.</p>
-        </div>
-      </div>
-    </div>
-
-    <h3>Step 2 — Add Tokens to terraform.tfvars</h3>
-    <pre><code>argocd_tunnel_token   = "eyJhIjoiNmZmM2Zm..."
-projectx_tunnel_token = "eyJhIjoiOTk5OTk5..."</code></pre>
-    <div class="note">
-      <p><code>terraform.tfvars</code> is git-ignored. Your tokens will never be committed to source control.</p>
-    </div>
-
-    <h3>Step 3 — Enable the Tunnel in values.yaml (ProjectX API only)</h3>
-    <p>Edit <code>ProjectX-ArgoCD/apps/projectx-api/values.yaml</code> and set:</p>
-    <pre><code>cloudflareTunnel:
-  enabled: true
-  hostname: projectx.pbcv.dev</code></pre>
-    <p>Commit and push — Argo CD will roll out the cloudflared pod automatically. The Argo CD tunnel is fully managed by Terraform and needs no changes in <code>values.yaml</code>.</p>
-
-    <h3>Step 4 — Apply</h3>
-    <pre><code>cd ProjectX/infra/terraform
-terraform apply</code></pre>
-    <p>Terraform creates:</p>
-    <ul>
-      <li>A <code>cloudflared</code> Deployment (2 replicas) in the <code>argocd</code> namespace pointing at <code>argocd-server:80</code></li>
-      <li>A <code>cloudflared-token</code> Secret in the <code>projectx</code> namespace (used by the Helm chart)</li>
-    </ul>
-
-    <div class="tip">
-      <p>After apply, <code>https://argocd.pbcv.dev</code> and <code>https://projectx.pbcv.dev</code> will be live within ~1 minute (time for cloudflared to register the tunnel).</p>
-    </div>
-
-    <hr>
-
-    <h3>Vault Secrets Operator (Advanced — Optional)</h3>
-    <p>Automatically syncs secrets from HashiCorp Vault into Kubernetes secrets. Useful if you want to rotate the Cloudflare tunnel token centrally without touching the cluster.</p>
-
-    <div class="note">
-      <p>Requires a running Vault instance with the Kubernetes auth method configured for the <code>projectx-api</code> role.</p>
-    </div>
-
-    <p>Enable in <code>terraform.tfvars</code>:</p>
-    <pre><code>install_vault_secrets_operator = true</code></pre>
-
-    <p>Enable in <code>values.yaml</code>:</p>
-    <pre><code>vault:
-  enabled: true
-  address: "https://vault.pbcv.dev"
-  kubernetesAuthRole: projectx-api</code></pre>
-
-    <h3>GCP Load Balancer Ingress (Alternative)</h3>
-    <p>If you prefer a GCP HTTPS Load Balancer instead of Cloudflare Tunnel for the API:</p>
-    <pre><code>ingress:
-  enabled: true
-  className: gce
-  host: projectx.pbcv.dev</code></pre>
-    <div class="warn">
-      <p>GCP Load Balancers cost ~$18/month. Disable the Ingress and push the change so Argo CD removes the GCP LB <strong>before</strong> running <code>terraform destroy</code>, otherwise the LB remains as an orphaned resource.</p>
-    </div>
-  </section>
-
-  <!-- CI -->
-  <section id="ci">
-    <h2>CI — Automated Build &amp; Deploy</h2>
-    <p>When you push code to <code>main</code>, GitHub Actions automatically builds the Docker image, pushes it to Artifact Registry, and updates the image tag in the GitOps repo. Argo CD detects the commit and rolls out the new version — no manual steps.</p>
-
-    <div class="card">
-      <h3>Full automated flow</h3>
-      <div class="flow">
-        <span class="flow-item">git push to<br>ProjectX/main</span>
-        <span class="flow-arrow">→</span>
-        <span class="flow-item">GitHub Actions<br>triggers</span>
-        <span class="flow-arrow">→</span>
-        <span class="flow-item">docker build<br>+ push to AR</span>
-        <span class="flow-arrow">→</span>
-        <span class="flow-item">updates image.tag<br>in ProjectX-ArgoCD</span>
-        <span class="flow-arrow">→</span>
-        <span class="flow-item">Argo CD detects<br>commit</span>
-        <span class="flow-arrow">→</span>
-        <span class="flow-item">rolls out new<br>image to GKE ✓</span>
-      </div>
-      <p style="margin-top:0.8rem">The workflow only triggers when files inside <code>app/</code> change — infra or chart changes do not trigger a build.</p>
-    </div>
-
-    <h3>Authentication — No Keys Required</h3>
-    <p>GitHub Actions authenticates to GCP using <strong>Workload Identity Federation (WIF)</strong>. GitHub's OIDC token is exchanged for a short-lived GCP token at runtime. No service account JSON keys are ever created or stored.</p>
-    <div class="tip">
-      <p>Terraform creates the WIF pool, provider, CI service account, and IAM bindings automatically when you set <code>github_repo</code> in <code>terraform.tfvars</code>.</p>
-    </div>
-
-    <hr>
-
-    <h3>Step 1 — Set github_repo in terraform.tfvars</h3>
-    <p>In <code>infra/terraform/terraform.tfvars</code>:</p>
-    <pre><code>github_repo = "DemOnJR/ProjectX"</code></pre>
-    <p>Then apply:</p>
-    <pre><code>cd ProjectX/infra/terraform
-terraform apply</code></pre>
-    <p>After apply, note the two new outputs — you'll need them in the next steps:</p>
-    <pre><code>terraform output ci_wif_provider
-terraform output ci_service_account</code></pre>
-
-    <h3>Step 2 — Create a GitOps PAT on GitHub</h3>
-    <p>The CI workflow needs to push commits to <code>ProjectX-ArgoCD</code>. Create a Personal Access Token:</p>
-    <div class="steps">
-      <div class="step">
-        <div class="step-body">
-          <p>Go to <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens/new</a> (Classic token).</p>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-body">
-          <p>Give it a name like <code>projectx-gitops-ci</code>, set expiration, and tick the <strong><code>repo</code></strong> scope (full repository access).</p>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-body">
-          <p>Copy the token — you will only see it once.</p>
-        </div>
-      </div>
-    </div>
-
-    <h3>Step 3 — Add GitHub Actions Variables &amp; Secret</h3>
-    <p>Go to your <strong>ProjectX</strong> repo → <strong>Settings → Secrets and variables → Actions</strong>.</p>
-
-    <p>Add these as <strong>Variables</strong> (not secrets — they are not sensitive):</p>
-    <div class="card">
-      <table>
-        <thead><tr><th>Variable name</th><th>Value (from Terraform outputs)</th></tr></thead>
-        <tbody>
-          <tr><td><code>WIF_PROVIDER</code></td><td>value of <code>terraform output ci_wif_provider</code></td></tr>
-          <tr><td><code>GCP_SERVICE_ACCOUNT</code></td><td>value of <code>terraform output ci_service_account</code></td></tr>
-          <tr><td><code>GCP_PROJECT_ID</code></td><td>your GCP project ID (e.g. <code>gcp-projectx-496112</code>)</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <p>Add this as a <strong>Secret</strong>:</p>
-    <div class="card">
-      <table>
-        <thead><tr><th>Secret name</th><th>Value</th></tr></thead>
-        <tbody>
-          <tr><td><code>GITOPS_PAT</code></td><td>the GitHub PAT you created in Step 2</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>Step 4 — Push and Watch It Work</h3>
-    <p>Edit anything inside <code>app/</code> (e.g. the hello message in <code>main.py</code>) and push to <code>main</code>:</p>
-    <pre><code>git add app/main.py
-git commit -m "feat: update hello message"
-git push origin main</code></pre>
-    <p>Then watch:</p>
-    <pre><code># GitHub Actions tab in your repo — watch the workflow run
-# After it finishes, check the new commit in ProjectX-ArgoCD:
-#   https://github.com/DemOnJR/ProjectX-ArgoCD/commits/main
-
-# Argo CD will sync within ~3 minutes, or force it:
+# Force ArgoCD sync if you don't want to wait ~3 min:
 kubectl patch application projectx-api -n argocd \
   --type merge -p '{"operation":{"sync":{}}}'
 
-# Watch the rollout
 kubectl rollout status deployment/projectx-api -n projectx</code></pre>
+</section>
 
-    <h3>Image Tags</h3>
-    <div class="card">
-      <table>
-        <thead><tr><th>Tag</th><th>When</th><th>Used for</th></tr></thead>
-        <tbody>
-          <tr><td><code>a1b2c3d4</code> (short SHA)</td><td>every push to main</td><td>pinned in values.yaml — exact version deployed</td></tr>
-          <tr><td><code>latest</code></td><td>every push to main</td><td>convenience alias — do not rely on this in production</td></tr>
-        </tbody>
-      </table>
-    </div>
+<!-- ══════════════════════════════════════════════════════════ ARGOCD -->
+<section id="argocd">
+  <h2>Accessing Argo CD</h2>
+  <div class="steps">
+    <div class="step"><div class="step-body"><p>Get the initial admin password:</p>
+    <pre><code>kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath='{.data.password}' | base64 -d && echo</code></pre></div></div>
+    <div class="step"><div class="step-body"><p>Port-forward and open in browser:</p>
+    <pre><code>kubectl -n argocd port-forward svc/argocd-server 8080:80
+# http://localhost:8080  (user: admin)</code></pre></div></div>
+  </div>
+  <div class="note"><p>Once Cloudflare tunnel is set up for ArgoCD (<code>argocd.pbcv.dev</code>), you can access it publicly without port-forward.</p></div>
 
-    <h3>What the Workflow Does (ci.yml)</h3>
-    <pre><code>on:
-  push:
-    branches: [main]
-    paths: ["app/**"]        # only triggers when app code changes
+  <h3>Useful Commands</h3>
+  <pre><code>kubectl get application -n argocd                      # app health + sync status
+kubectl get pods -n projectx                           # running pods
+kubectl rollout status deployment/projectx-api -n projectx
+kubectl logs -n projectx deployment/projectx-api       # app logs</code></pre>
+</section>
 
-steps:
-  1. Checkout code
-  2. Authenticate to GCP via WIF (no keys!)
-  3. docker build + push  → AR tag = first 8 chars of git SHA
-  4. Clone ProjectX-ArgoCD
-  5. yq: update .image.tag in values.yaml
-  6. git commit + push     → ArgoCD detects and deploys</code></pre>
-  </section>
+<!-- ══════════════════════════════════════════════════════════ CF TUNNELS -->
+<section id="cf">
+  <h2>Cloudflare Tunnels</h2>
+  <p>Expose both ArgoCD and the API publicly without GCP Load Balancers or open firewall ports. You create the tunnels in the Cloudflare dashboard and paste the tokens into Terraform.</p>
 
-  <!-- Vault -->
-  <section id="vault">
-    <h2>HashiCorp Vault Integration</h2>
+  <div class="card-grid">
+    <div class="card"><span class="badge bp">argocd.pbcv.dev</span><h3>Argo CD tunnel</h3><p>Managed by Terraform — <code>cloudflared</code> Deployment in <code>argocd</code> namespace, points at <code>argocd-server:80</code>.</p></div>
+    <div class="card"><span class="badge bg">projectx.pbcv.dev</span><h3>ProjectX API tunnel</h3><p>Managed by Argo CD via Helm chart when <code>cloudflareTunnel.enabled: true</code>. Token injected by Terraform or Vault.</p></div>
+  </div>
 
-    <div class="note">
-      <p><strong>Run this after <code>terraform apply</code> in <code>infra/terraform/</code> completes.</strong> The vault Terraform reads the live GKE cluster to configure Kubernetes auth.</p>
-    </div>
+  <div class="steps">
+    <div class="step"><div class="step-body"><p>Go to <a href="https://one.dash.cloudflare.com" target="_blank">one.dash.cloudflare.com</a> → Networks → Tunnels → Create tunnel (Cloudflared).</p></div></div>
+    <div class="step"><div class="step-body"><p>Create <strong>tunnel 1</strong> (ArgoCD): public hostname <code>argocd.pbcv.dev</code> → service <code>http://argocd-server.argocd.svc.cluster.local:80</code>. Copy the token.</p></div></div>
+    <div class="step"><div class="step-body"><p>Create <strong>tunnel 2</strong> (API): public hostname <code>projectx.pbcv.dev</code> → service <code>http://projectx-api.projectx.svc.cluster.local:80</code>. Copy the token.</p></div></div>
+    <div class="step"><div class="step-body"><p>Add tokens to <code>infra/terraform/terraform.tfvars</code> and apply:</p>
+    <pre><code>argocd_tunnel_token   = "eyJ..."
+projectx_tunnel_token = "eyJ..."   # if not using Vault
+terraform apply</code></pre></div></div>
+    <div class="step"><div class="step-body"><p>Enable the tunnel in <code>values.yaml</code> and push (ProjectX API only — ArgoCD is Terraform-managed):</p>
+    <pre><code>cloudflareTunnel:
+  enabled: true
+  hostname: projectx.pbcv.dev</code></pre></div></div>
+  </div>
+  <div class="warn"><p>If you use Vault for the ProjectX tunnel token, leave <code>projectx_tunnel_token</code> empty in main <code>terraform.tfvars</code> — Vault/VSO handles injection. See the Vault section.</p></div>
+</section>
 
-    <p>All your secrets live in one gitignored file — <code>infra/terraform-vault/terraform.tfvars</code>. Run <code>terraform apply</code> there and Terraform writes everything to Vault automatically. The cluster then reads secrets from Vault via the Vault Secrets Operator (VSO) — no tokens ever touch Git.</p>
+<!-- ══════════════════════════════════════════════════════════ VAULT -->
+<section id="vault">
+  <h2>HashiCorp Vault Integration</h2>
+  <div class="note"><p><strong>Run after</strong> <code>terraform apply</code> in <code>infra/terraform/</code>. The Vault Terraform reads the live GKE cluster.</p></div>
+  <p>All secrets live in one gitignored file: <code>infra/terraform-vault/terraform.tfvars</code>. Terraform writes them to Vault. VSO syncs them into the cluster automatically and refreshes every hour.</p>
 
-    <h3>How It Works End-to-End</h3>
-    <div class="flow">
-      <span class="flow-item">terraform.tfvars<br><small>(your secrets file)</small></span>
-      <span class="flow-arrow">→</span>
-      <span class="flow-item">terraform apply<br><small>(terraform-vault/)</small></span>
-      <span class="flow-arrow">→</span>
-      <span class="flow-item">Vault<br><small>kv/projectx, kv/argocd</small></span>
-      <span class="flow-arrow">→</span>
-      <span class="flow-item">VSO reads Vault<br><small>(Kubernetes auth)</small></span>
-      <span class="flow-arrow">→</span>
-      <span class="flow-item">K8s Secret created<br><small>cloudflared-token</small></span>
-      <span class="flow-arrow">→</span>
-      <span class="flow-item">cloudflared starts ✓</span>
-    </div>
-
-    <p style="margin-top:0.8rem">VSO also <strong>refreshes</strong> secrets automatically every hour. Rotate the token in Vault → pods get the new value without any restart.</p>
-
-    <h3>What Terraform Creates in Vault</h3>
-    <div class="card-grid">
-      <div class="card">
-        <span class="badge badge-orange">Vault side</span>
-        <ul class="checklist" style="margin-top:0.6rem">
-          <li>Kubernetes auth backend at <code>kubernetes/</code></li>
-          <li>Configured with GKE API endpoint + CA cert</li>
-          <li>Policy <code>projectx-api</code> → read <code>kv/data/projectx</code></li>
-          <li>Role <code>projectx-api</code> → SA <code>projectx-vault-auth</code> in namespace <code>projectx</code></li>
-          <li>Secret <code>kv/projectx</code> → <code>{ token: "..." }</code></li>
-          <li>Secret <code>kv/argocd</code> → <code>{ token: "..." }</code></li>
-        </ul>
-      </div>
-      <div class="card">
-        <span class="badge badge-blue">Cluster side (ArgoCD)</span>
-        <ul class="checklist" style="margin-top:0.6rem">
-          <li>ServiceAccount <code>projectx-vault-auth</code></li>
-          <li>VaultConnection → vault.pbcv.dev</li>
-          <li>VaultAuth → Kubernetes auth, role <code>projectx-api</code></li>
-          <li>VaultStaticSecret → <code>kv/projectx.token</code> → K8s Secret <code>cloudflared-token</code></li>
-        </ul>
-      </div>
-    </div>
-
-    <hr>
-
-    <h3>Step 1 — Prerequisites: KV v2 Engine</h3>
-    <p>Your Vault must have the KV v2 secrets engine enabled at <code>kv/</code>. Check and enable if needed:</p>
-    <pre><code>vault secrets list
-
+  <h3>Step 1 — Enable KV v2 in Vault</h3>
+  <pre><code>vault secrets list
 # If kv/ is not listed:
 vault secrets enable -path=kv kv-v2</code></pre>
 
-    <h3>Step 2 — Enable VSO in Main Terraform</h3>
-    <p>Make sure VSO is installed by the main Terraform. In <code>infra/terraform/terraform.tfvars</code>:</p>
-    <pre><code>install_vault_secrets_operator = true</code></pre>
-    <p>If you already ran <code>terraform apply</code> without it, just run it again — it only adds the VSO Helm release.</p>
+  <h3>Step 2 — Enable VSO in Main Terraform</h3>
+  <p>In <code>infra/terraform/terraform.tfvars</code>: <code>install_vault_secrets_operator = true</code>. Re-run <code>terraform apply</code> if needed.</p>
 
-    <h3>Step 3 — Get Your Vault Token</h3>
-    <pre><code># Login with username/password (or whichever auth method you use)
-vault login -method=userpass username=YOUR_USERNAME
-
-# Verify
+  <h3>Step 3 — Get Vault Token</h3>
+  <pre><code>vault login -method=userpass username=YOUR_USERNAME
+# or
+export VAULT_TOKEN="hvs.your_token"
 vault token lookup</code></pre>
 
-    <h3>Step 4 — Fill in the Secrets File</h3>
-    <p>This is the only file you need to edit. It is gitignored — your tokens never go to Git.</p>
-    <pre><code>cd ProjectX/infra/terraform-vault
+  <h3>Step 4 — Fill in the Secrets File</h3>
+  <pre><code>cd ProjectX/infra/terraform-vault
 cp terraform.tfvars.example terraform.tfvars</code></pre>
+  <pre><code>gcp_project_id = "YOUR_PROJECT_ID"
+vault_address  = "https://vault.pbcv.dev"
 
-    <p>Open <code>terraform.tfvars</code> and fill it in:</p>
-    <pre><code>gcp_project_id = "YOUR_PROJECT_ID"
+cloudflare_projectx_token = "eyJ..."   # → written to kv/projectx
+cloudflare_argocd_token   = "eyJ..."   # → written to kv/argocd</code></pre>
+  <div class="note"><p><code>terraform.tfvars</code> is gitignored — tokens never hit Git.</p></div>
 
-vault_address = "https://vault.pbcv.dev"
+  <h3>Step 5 — Apply</h3>
+  <pre><code>terraform init && terraform apply</code></pre>
+  <p>Configures Vault: Kubernetes auth backend → GKE endpoint + CA cert · policy <code>projectx-api</code> · role <code>projectx-api</code> · writes both secrets.</p>
 
-# Cloudflare tunnel tokens — paste both here.
-# Terraform writes them to Vault. Leave empty to skip (if already in Vault).
-cloudflare_projectx_token = "eyJ..."   # → kv/projectx  (used by VSO for the API)
-cloudflare_argocd_token   = "eyJ..."   # → kv/argocd    (stored for reference)</code></pre>
-
-    <div class="note">
-      <p>You do not need to touch <code>infra/terraform/terraform.tfvars</code> for secrets anymore. Remove <code>projectx_tunnel_token</code> and <code>argocd_tunnel_token</code> from it if you set them before — VSO now handles secret injection.</p>
-    </div>
-
-    <h3>Step 5 — Apply the Vault Terraform</h3>
-    <pre><code>cd ProjectX/infra/terraform-vault
-terraform init
-terraform apply</code></pre>
-
-    <p>Terraform will:</p>
-    <ul>
-      <li>Enable the Kubernetes auth backend in Vault and point it at your GKE cluster</li>
-      <li>Create policy <code>projectx-api</code> and role <code>projectx-api</code></li>
-      <li>Write <code>kv/projectx { token: "..." }</code> and <code>kv/argocd { token: "..." }</code> to Vault</li>
-    </ul>
-
-    <div class="tip">
-      <p>Want to add more secrets later? Add variables to <code>terraform.tfvars</code> and new <code>vault_kv_secret_v2</code> resources to <code>main.tf</code>. Rerun <code>terraform apply</code> — Vault is updated automatically.</p>
-    </div>
-
-    <h3>Step 6 — Enable Vault + Cloudflare Tunnel in values.yaml</h3>
-    <p>Edit <code>ProjectX-ArgoCD/apps/projectx-api/values.yaml</code> and set:</p>
-    <pre><code>cloudflareTunnel:
+  <h3>Step 6 — Enable Vault in values.yaml</h3>
+  <pre><code>cloudflareTunnel:
   enabled: true
   hostname: projectx.pbcv.dev
 
 vault:
   enabled: true
   address: "https://vault.pbcv.dev"
-  kubernetesAuthMount: kubernetes
   kubernetesAuthRole: projectx-api</code></pre>
-    <p>Commit and push. Argo CD syncs automatically — within ~2 minutes VSO creates the <code>cloudflared-token</code> K8s secret and the cloudflared pods start.</p>
+  <p>Push to GitHub → ArgoCD deploys VaultStaticSecret → VSO creates <code>cloudflared-token</code> → cloudflared starts.</p>
 
-    <h3>Step 7 — Verify</h3>
-    <pre><code># Check VSO synced the secret
-kubectl get secret cloudflared-token -n projectx
-
-# Check cloudflared pods are running
-kubectl get pods -n projectx
-
-# Check VSO logs if something is wrong
-kubectl logs -n vault-secrets-operator-system \
-  -l app.kubernetes.io/name=vault-secrets-operator | tail -30</code></pre>
-
-    <hr>
-
-    <h3>Rotating a Secret</h3>
-    <p>Update the value in Vault — VSO picks it up automatically within <code>refreshAfter</code> (default 1 hour). To force immediate refresh:</p>
-    <pre><code># Update in Vault
-vault kv put kv/projectx token="eyJ_NEW_TOKEN..."
-
-# Force VSO to re-sync now
+  <h3>Rotating a Secret</h3>
+  <pre><code>vault kv put kv/projectx token="eyJ_NEW..."
+# Force immediate VSO sync:
 kubectl annotate vaultstaticsecret projectx-api-cloudflared-token \
   vault.hashicorp.com/requestReconcile="$(date)" -n projectx --overwrite</code></pre>
 
-    <h3>Cleanup</h3>
-    <p>When you destroy the cluster, clean up Vault first:</p>
-    <pre><code># 1. Remove Vault configuration (auth backend, role, policy)
-cd ProjectX/infra/terraform-vault
-terraform destroy
+  <h3>Cleanup Order</h3>
+  <pre><code>cd infra/terraform-vault && terraform destroy
+cd ../terraform && terraform destroy</code></pre>
+</section>
 
-# 2. Then destroy the cluster
-cd ../terraform
-terraform destroy</code></pre>
+<!-- ══════════════════════════════════════════════════════════ DESTROY -->
+<section id="destroy">
+  <h2>Full Cleanup — terraform destroy</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>Resource</th><th>How cleaned up</th></tr></thead>
+      <tbody>
+        <tr><td>Docker images in Artifact Registry</td><td>Destroy-time provisioner empties repo first</td></tr>
+        <tr><td>Artifact Registry repository</td><td>Destroyed after images removed</td></tr>
+        <tr><td>K8s resources (projectx, argocd ns)</td><td>Deleted when GKE cluster is deleted</td></tr>
+        <tr><td>ArgoCD / VSO Helm releases</td><td>Terraform destroys before cluster</td></tr>
+        <tr><td>GKE node pool + cluster</td><td>Destroyed by GKE module</td></tr>
+        <tr><td>GKE node service account</td><td>Destroyed by GKE module</td></tr>
+        <tr><td>WIF pool + CI service account</td><td>Destroyed by ci.tf resources</td></tr>
+        <tr><td>VPC + subnets</td><td>Destroyed by network module</td></tr>
+        <tr><td>GCP project APIs</td><td>Left enabled (disable_on_destroy = false)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="warn"><p>If you enabled GCP Load Balancer Ingress (<code>ingress.enabled: true</code>), disable it and push first so ArgoCD removes the GCP LB before you destroy.</p></div>
+  <pre><code># If using Vault, destroy vault config first:
+cd ProjectX/infra/terraform-vault && terraform destroy
 
-    <h3>How Kubernetes Auth Works (Internals)</h3>
-    <div class="card">
-      <ol style="margin:0 0 0 1.2rem">
-        <li>VSO presents the <code>projectx-vault-auth</code> service account JWT to Vault at <code>/v1/auth/kubernetes/login</code></li>
-        <li>Vault verifies the JWT against the GKE API server using the CA cert configured by Terraform</li>
-        <li>Vault checks that the SA name and namespace match the <code>projectx-api</code> role</li>
-        <li>Vault issues a short-lived token scoped to the <code>projectx-api</code> policy</li>
-        <li>VSO reads <code>kv/data/projectx</code> and creates/updates the <code>cloudflared-token</code> K8s secret</li>
-        <li>Cloudflared pod reads the secret and connects to Cloudflare ✓</li>
-      </ol>
-    </div>
-  </section>
+# Destroy all GCP infrastructure:
+cd ProjectX/infra/terraform && terraform destroy</code></pre>
 
-  <!-- Destroy -->
-  <section id="destroy">
-    <h2>Full Cleanup — terraform destroy</h2>
-    <p>Running <code>terraform destroy</code> removes everything Terraform created. Here is what happens step by step:</p>
+  <h3>Nuclear Option — Delete the Entire Project</h3>
+  <pre><code>gcloud projects delete YOUR_PROJECT_ID</code></pre>
+  <div class="danger"><p>Deletes everything in the project. 30-day grace period to restore.</p></div>
+</section>
 
-    <div class="card">
-      <table>
-        <thead><tr><th>Resource</th><th>How it's cleaned up</th></tr></thead>
-        <tbody>
-          <tr><td>K8s resources (projectx namespace)</td><td>Deleted when the GKE cluster is deleted</td></tr>
-          <tr><td>Argo CD Helm release</td><td>Terraform destroys it before the cluster</td></tr>
-          <tr><td>Docker images in Artifact Registry</td><td>Destroy-time provisioner empties the repo first</td></tr>
-          <tr><td>Artifact Registry repository</td><td>Destroyed after images are removed</td></tr>
-          <tr><td>GKE node pool &amp; cluster</td><td>Destroyed by the GKE Terraform module</td></tr>
-          <tr><td>GKE node service account</td><td>Destroyed by the GKE module</td></tr>
-          <tr><td>VPC subnets &amp; network</td><td>Destroyed by the network module</td></tr>
-          <tr><td>GCP project APIs</td><td>Left enabled (<code>disable_on_destroy = false</code>)</td></tr>
-        </tbody>
-      </table>
-    </div>
+<!-- ══════════════════════════════════════════════════════════ TROUBLESHOOT -->
+<section id="troubleshoot">
+  <h2>Troubleshooting</h2>
 
-    <div class="warn">
-      <p><strong>Before destroying</strong>: if you enabled the GCP Load Balancer Ingress (<code>ingress.enabled: true</code>), disable it in <code>values.yaml</code> and push the change so Argo CD removes the GCP LB first. Otherwise the LB will remain in GCP and continue to incur costs.</p>
-    </div>
+  <h3>Pods in ErrImagePull / ImagePullBackOff</h3>
+  <div class="card"><p><strong>Fix:</strong> Terraform now grants <code>roles/artifactregistry.reader</code> to the GKE node SA automatically. Verify the image URL in <code>values.yaml</code> matches the AR repo exactly.</p>
+  <pre><code>kubectl describe pod -n projectx -l app.kubernetes.io/name=projectx-api | grep -A5 Events</code></pre></div>
 
-    <pre><code>cd ProjectX/infra/terraform
-terraform destroy</code></pre>
+  <h3>Cloudflared CrashLoopBackOff</h3>
+  <div class="card"><p>The <code>cloudflared-token</code> secret doesn't exist yet. Either set <code>projectx_tunnel_token</code> in main <code>terraform.tfvars</code> and apply, or run terraform-vault if using Vault.</p>
+  <pre><code># Quick manual fix:
+kubectl create secret generic cloudflared-token \
+  --from-literal=token=YOUR_TOKEN -n projectx</code></pre></div>
 
-    <div class="note">
-      <p>If <code>terraform destroy</code> fails mid-way, you can rerun it safely — Terraform is idempotent for destroy operations. You can also delete the GCP project entirely from the console to guarantee zero remaining resources.</p>
-    </div>
+  <h3>GitHub Actions fails: "google-github-actions/auth: failed"</h3>
+  <div class="card"><p>WIF variables not set or wrong. Verify:</p>
+  <pre><code># In GitHub repo → Settings → Variables:
+WIF_PROVIDER      = projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/...
+GCP_SERVICE_ACCOUNT = projectx-ci@YOUR_PROJECT_ID.iam.gserviceaccount.com
+GCP_PROJECT_ID    = YOUR_PROJECT_ID</code></pre>
+  <p>Get correct values: <code>cd infra/terraform && terraform output ci_wif_provider</code></p></div>
 
-    <h3>Delete the GCP Project (nuclear option)</h3>
-    <pre><code>gcloud projects delete YOUR_PROJECT_ID</code></pre>
-    <div class="danger">
-      <p>This permanently deletes the project and all resources inside it. There is a 30-day grace period during which you can restore it.</p>
-    </div>
-  </section>
-
-  <!-- Troubleshoot -->
-  <section id="troubleshoot">
-    <h2>Troubleshooting</h2>
-
-    <h3>Pods stuck in <code>ErrImagePull</code> / <code>ImagePullBackOff</code></h3>
-    <div class="card">
-      <p><strong>Cause:</strong> GKE nodes cannot pull from Artifact Registry.</p>
-      <p><strong>Fix:</strong> Already handled — Terraform now grants <code>roles/artifactregistry.reader</code> to the GKE node service account automatically.</p>
-      <p><strong>Verify:</strong></p>
-      <pre><code>kubectl describe pod -n projectx -l app.kubernetes.io/name=projectx-api | grep -A5 Events</code></pre>
-      <p>The image URL must match the repository URL in <code>values.yaml</code> exactly.</p>
-    </div>
-
-    <h3>Cloudflared pod stuck in <code>CrashLoopBackOff</code></h3>
-    <div class="card">
-      <p><strong>Cause:</strong> The <code>cloudflared-token</code> secret does not exist in the <code>projectx</code> namespace.</p>
-      <p><strong>Fix:</strong> Create it manually:</p>
-      <pre><code>kubectl create secret generic cloudflared-token \
-  --from-literal=token=YOUR_TUNNEL_TOKEN -n projectx</code></pre>
-      <p>Or set <code>cloudflareTunnel.enabled: false</code> in <code>values.yaml</code> if you don't need the tunnel.</p>
-    </div>
-
-    <h3>Terraform apply fails with "master_authorized_networks"</h3>
-    <div class="card">
-      <p><strong>Cause:</strong> Your current IP changed since the last apply (e.g. new network connection).</p>
-      <p><strong>Fix:</strong> Rerun <code>terraform apply</code> — it detects your current IP via <code>checkip.amazonaws.com</code> and updates the allowlist.</p>
-    </div>
-
-    <h3>Terraform destroy fails on Artifact Registry</h3>
-    <div class="card">
-      <p><strong>Cause:</strong> Images existed in the repository before the destroy-time cleanup was in place.</p>
-      <p><strong>Fix:</strong> Delete images manually then rerun destroy:</p>
-      <pre><code>REPO="europe-west3-docker.pkg.dev/YOUR_PROJECT_ID/projectx"
-gcloud artifacts docker images list "$REPO" \
-  --format="value(DIGEST)" | sort -u | \
-  while read digest; do
-    gcloud artifacts docker images delete "$REPO@$digest" \
-      --delete-tags --quiet
-  done
-terraform destroy</code></pre>
-    </div>
-
-    <h3>Argo CD Application stuck in <code>OutOfSync</code></h3>
-    <div class="card">
-      <p>Check the Application events and logs:</p>
-      <pre><code>kubectl describe application projectx-api -n argocd
-kubectl logs -n argocd -l app.kubernetes.io/name=argocd-application-controller | tail -50</code></pre>
-      <p>Common causes: GitOps repo URL typo, incorrect <code>gitops_app_path</code>, or VaultStaticSecret CRDs missing (enable VSO or set <code>vault.enabled: false</code>).</p>
-    </div>
-
-    <h3>VSO pod running but <code>cloudflared-token</code> secret not created</h3>
-    <div class="card">
-      <p>Check the VaultStaticSecret status:</p>
-      <pre><code>kubectl describe vaultstaticsecret -n projectx
+  <h3>VSO secret not created</h3>
+  <div class="card">
+  <pre><code>kubectl describe vaultstaticsecret -n projectx
 kubectl logs -n vault-secrets-operator-system \
   -l app.kubernetes.io/name=vault-secrets-operator | tail -30</code></pre>
-      <p>Common causes:</p>
-      <ul>
-        <li><strong>Auth backend not configured</strong> — run <code>terraform apply</code> in <code>infra/terraform-vault/</code></li>
-        <li><strong>Wrong role/SA name</strong> — verify <code>vault_kubernetes_auth_backend_role.projectx_api</code> matches <code>values.yaml vault.serviceAccountName</code></li>
-        <li><strong>Secret not in Vault yet</strong> — run <code>vault kv put kv/projectx token="..."</code></li>
-        <li><strong>KV v2 not enabled</strong> — run <code>vault secrets enable -path=kv kv-v2</code></li>
-      </ul>
-    </div>
+  <p>Common causes: terraform-vault not applied · wrong role/SA name · KV v2 not enabled · secret path mismatch.</p></div>
 
-    <h3>kubectl: "no cluster" or stale credentials</h3>
-    <pre><code>gcloud container clusters get-credentials projectx-gke \
+  <h3>terraform destroy fails on Artifact Registry</h3>
+  <div class="card"><p>Images exist from before the cleanup provisioner was added. Delete manually:</p>
+  <pre><code>REPO="europe-west3-docker.pkg.dev/YOUR_PROJECT_ID/projectx"
+gcloud artifacts docker images list "$REPO" --format="value(DIGEST)" | sort -u | \
+  while read d; do gcloud artifacts docker images delete "$REPO@$d" --delete-tags --quiet; done
+terraform destroy</code></pre></div>
+
+  <h3>ArgoCD Application stuck OutOfSync</h3>
+  <div class="card">
+  <pre><code>kubectl describe application projectx-api -n argocd</code></pre>
+  <p>Common causes: wrong <code>gitops_repo_url</code> · wrong <code>gitops_app_path</code> · VaultStaticSecret CRDs missing (set <code>vault.enabled: false</code> or install VSO).</p></div>
+
+  <h3>Stale kubectl credentials</h3>
+  <pre><code>gcloud container clusters get-credentials projectx-gke \
   --region europe-west3 --project YOUR_PROJECT_ID</code></pre>
-  </section>
+</section>
 
-  <hr>
-  <p style="color:var(--muted);font-size:0.85rem;text-align:center">ProjectX · GitOps on GKE · Generated by Cursor</p>
+<hr>
+<p style="color:var(--muted);font-size:.82rem;text-align:center">ProjectX · GKE + GitOps + CI + Vault · Generated by Cursor</p>
 
 </main>
+
+<script>
+// ── Tab switching ────────────────────────────────────────────
+document.querySelectorAll('.diagram-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const panelId = tab.dataset.panel;
+    tab.closest('.diagram-section').querySelectorAll('.diagram-tab').forEach(t => t.classList.remove('active'));
+    tab.closest('.diagram-section').querySelectorAll('.diagram-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(panelId).classList.add('active');
+  });
+});
+
+// ── Zoom / pan for each canvas ───────────────────────────────
+function initCanvas(containerId, svgId) {
+  const cc   = document.getElementById(containerId);
+  const svg  = document.getElementById(svgId);
+  let sc = 0.62, tx = 0, ty = 0;   // start slightly zoomed out so full diagram is visible
+  let drag = false, ox, oy;
+
+  function apply() {
+    svg.style.transformOrigin = '0 0';
+    svg.style.transform = `translate(${tx}px,${ty}px) scale(${sc})`;
+  }
+  apply();
+
+  // Scroll to zoom (centred on cursor)
+  cc.addEventListener('wheel', e => {
+    e.preventDefault();
+    const rect = cc.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const delta = e.deltaY < 0 ? 1.12 : 0.89;
+    tx = mx - (mx - tx) * delta;
+    ty = my - (my - ty) * delta;
+    sc = Math.max(0.15, Math.min(6, sc * delta));
+    apply();
+  }, {passive: false});
+
+  // Drag to pan
+  cc.addEventListener('mousedown', e => { drag = true; ox = e.clientX - tx; oy = e.clientY - ty; cc.classList.add('dragging'); });
+  window.addEventListener('mousemove', e => { if (!drag) return; tx = e.clientX - ox; ty = e.clientY - oy; apply(); });
+  window.addEventListener('mouseup', () => { drag = false; cc.classList.remove('dragging'); });
+
+  // Touch support
+  let lastTouchDist = 0, ltx = 0, lty = 0;
+  cc.addEventListener('touchstart', e => {
+    if (e.touches.length === 1) { ox = e.touches[0].clientX - tx; oy = e.touches[0].clientY - ty; }
+    if (e.touches.length === 2) {
+      lastTouchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      ltx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      lty = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    }
+  }, {passive: true});
+  cc.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (e.touches.length === 1) { tx = e.touches[0].clientX - ox; ty = e.touches[0].clientY - oy; apply(); }
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      const delta = dist / lastTouchDist;
+      const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      tx = cx - (ltx - tx) * delta - (cx - ltx);
+      ty = cy - (lty - ty) * delta - (cy - lty);
+      sc = Math.max(0.15, Math.min(6, sc * delta));
+      lastTouchDist = dist; ltx = cx; lty = cy;
+      apply();
+    }
+  }, {passive: false});
+
+  // Controls (+, -, reset)
+  cc.closest('.diagram-wrap').querySelectorAll('button[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const rect = cc.getBoundingClientRect();
+      const cx = rect.width / 2, cy = rect.height / 2;
+      if (btn.dataset.action === 'zoomin')  { tx = cx - (cx - tx) * 1.25; ty = cy - (cy - ty) * 1.25; sc = Math.min(6, sc * 1.25); }
+      if (btn.dataset.action === 'zoomout') { tx = cx - (cx - tx) * 0.8;  ty = cy - (cy - ty) * 0.8;  sc = Math.max(0.15, sc * 0.8); }
+      if (btn.dataset.action === 'reset')   { sc = 0.62; tx = 0; ty = 0; }
+      apply();
+    });
+  });
+}
+
+initCanvas('cc-arch',  'svg-arch');
+initCanvas('cc-ci',    'svg-ci');
+initCanvas('cc-vault', 'svg-vault');
+</script>
 </body>
 </html>
