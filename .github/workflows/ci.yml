@@ -75,25 +75,29 @@ jobs:
             git commit -m "ci: deploy ${IMAGE}:${IMAGE_TAG}" && git push
 
       # ── 6. Health check (polls until ArgoCD rolls out the new pods) ──────────
+      #    ArgoCD self-heal can take up to ~3 min to detect the GitOps change,
+      #    plus another ~1 min for the rolling update — 20 × 15 s = 5 min window.
       - name: "🩺  Health check"
         id: healthcheck
         run: |
-          echo "Waiting for ArgoCD to sync and pods to roll out..."
-          for i in $(seq 1 12); do
+          echo "Giving ArgoCD time to detect the GitOps change..."
+          sleep 45
+          echo "Polling ${{ secrets.APP_URL }}/healthz ..."
+          for i in $(seq 1 20); do
             HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
               --max-time 5 "${{ secrets.APP_URL }}/healthz" 2>/dev/null || echo "000")
-            echo "  Attempt ${i}/12 → HTTP ${HTTP}"
+            echo "  Attempt ${i}/20 → HTTP ${HTTP}"
             if [ "${HTTP}" = "200" ]; then
               BODY=$(curl -s --max-time 5 "${{ secrets.APP_URL }}/healthz")
               echo "  ✅ ${BODY}"
               echo "status=healthy" >> "$GITHUB_OUTPUT"
               break
             fi
-            [ "${i}" -lt 12 ] && sleep 15
+            [ "${i}" -lt 20 ] && sleep 15
           done
           if ! grep -q "status=healthy" "$GITHUB_OUTPUT" 2>/dev/null; then
             echo "status=degraded" >> "$GITHUB_OUTPUT"
-            echo "  ❌ Health check timed out after 3 minutes"
+            echo "  ❌ Health check timed out after 5 minutes"
             exit 1
           fi
 
