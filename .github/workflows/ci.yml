@@ -15,11 +15,10 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      REGION:   europe-west3
-      REGISTRY: europe-west3-docker.pkg.dev
-      REPO:     projectx
-      IMAGE:    projectx-api
-      GITOPS_REPO: DemOnJR/ProjectX-ArgoCD
+      REGION:        europe-west3
+      REPO:          projectx
+      IMAGE:         projectx-api
+      GITOPS_REPO:   DemOnJR/ProjectX-ArgoCD
       GITOPS_VALUES: apps/projectx-api/values.yaml
 
     steps:
@@ -36,12 +35,12 @@ jobs:
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+        run: gcloud auth configure-docker ${{ secrets.REGISTRY }} --quiet
 
       - name: Build and push image
         run: |
           SHORT_SHA="${GITHUB_SHA::8}"
-          FULL_IMAGE="${REGISTRY}/${{ secrets.GCP_PROJECT_ID }}/${REPO}/${IMAGE}"
+          FULL_IMAGE="${{ secrets.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/${REPO}/${IMAGE}"
 
           docker build \
             -t "${FULL_IMAGE}:${SHORT_SHA}" \
