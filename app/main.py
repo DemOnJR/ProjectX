@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-VERSION = "0.2.2"
+VERSION = "0.3.0"
 
 app = FastAPI(title="ProjectX API", version=VERSION)
 
