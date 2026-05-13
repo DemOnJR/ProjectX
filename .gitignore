@@ -2,6 +2,9 @@
 *.tfstate
 *.tfstate.*
 terraform.tfvars
+tfplan
+tfplan-*
+*.tfplan
 __pycache__/
 .venv/
 .pytest_cache/

@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 
-app = FastAPI(title="ProjectX API", version="0.1.0")
+VERSION = "0.1.1"
+
+app = FastAPI(title="ProjectX API", version=VERSION)
 
 
 @app.get("/")
@@ -11,3 +13,8 @@ def read_root() -> dict[str, str]:
 @app.get("/healthz")
 def healthz() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/version")
+def version() -> dict[str, str]:
+    return {"version": VERSION}
