@@ -143,9 +143,10 @@ variable "github_repo" {
 
 variable "github_token" {
   description = <<-EOT
-    GitHub token used by Terraform to create Actions secrets on github_repo.
+    GitHub token used by Terraform to create and delete Actions secrets on github_repo.
     Classic PAT: repo scope. Fine-grained: access to github_repo with "Secrets" read and write.
-    401 errors on plan/apply mean the token is expired, revoked, or lacks those permissions — create a new PAT and update this value.
+    terraform destroy loads the same tfvars / -var-file / TF_VAR_github_token as apply, and uses this token to remove github_actions_secret resources before dependent GCP resources are torn down — keep a valid token until destroy finishes, or export GITHUB_TOKEN with the same PAT and leave this empty (see github provider in github-ci.tf).
+    401 errors on plan/apply/destroy mean the token is expired, revoked, or lacks those permissions — create a new PAT and update this value.
     Until the token is fixed, you can run terraform plan/apply with -refresh=false to change GCP resources without the provider calling the GitHub API (use sparingly; refresh drift is possible).
     Leave empty to skip creating github_actions_secret resources (github_repo must still be set for WIF in ci.tf).
   EOT

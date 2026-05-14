@@ -17,8 +17,11 @@ locals {
 }
 
 provider "github" {
-  token = var.github_token
   owner = var.github_repo != "" ? split("/", var.github_repo)[0] : ""
+  # When github_token is unset in tfvars, omit this field so the provider can use
+  # the GITHUB_TOKEN environment variable (same PAT) for destroy/apply without
+  # duplicating secrets in a file.
+  token = var.github_token != "" ? var.github_token : null
 }
 
 # ── Actions Secrets — all GCP references stored as secrets so they are
