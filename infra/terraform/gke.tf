@@ -18,12 +18,12 @@ module "gke" {
   remove_default_node_pool = true
 
   master_authorized_networks = concat(
-    [
+    var.gke_master_authorized_include_current_ip ? [
       {
         cidr_block   = local.terraform_client_cidr
         display_name = "terraform-client"
       },
-    ],
+    ] : [],
     var.extra_gke_master_authorized_networks,
   )
 

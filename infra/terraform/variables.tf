@@ -82,12 +82,29 @@ variable "node_max_count" {
 }
 
 variable "extra_gke_master_authorized_networks" {
-  description = "Extra CIDRs allowed to reach the GKE control plane (in addition to the Terraform client IP from data.http). Use stable /32s (office, VPN) so plan/destroy still works if your home IP changes and master_authorized_networks would otherwise lock you out (Kubernetes API Unauthorized)."
+  description = "Extra CIDRs allowed to reach the GKE control plane (in addition to the current public IP when gke_master_authorized_include_current_ip is true). Prefer at least one stable /32 (office, VPN) so plan and terraform destroy keep working after your home IP changes (avoids Kubernetes client timeouts)."
   type = list(object({
     cidr_block   = string
     display_name = string
   }))
   default = []
+}
+
+variable "gke_master_authorized_include_current_ip" {
+  description = "When true (default), adds your current public IP (see data.http in main.tf) to GKE master authorized networks. Set false and use only extra_gke_master_authorized_networks (stable VPN/office /32) if terraform destroy fails with context deadline exceeded because your IP no longer matches the cluster allowlist."
+  type        = bool
+  default     = true
+
+  validation {
+    condition     = var.gke_master_authorized_include_current_ip || length(var.extra_gke_master_authorized_networks) > 0
+    error_message = "When gke_master_authorized_include_current_ip is false, extra_gke_master_authorized_networks must contain at least one CIDR so the GKE API stays reachable."
+  }
+}
+
+variable "helm_release_wait" {
+  description = "When true (default), Helm waits for hooks and readiness on install/upgrade/uninstall. Set false for terraform destroy if uninstall keeps timing out (stuck finalizers); you may need a second destroy or manual kubectl cleanup if anything is left behind."
+  type        = bool
+  default     = true
 }
 
 variable "artifact_registry_repository_id" {

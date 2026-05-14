@@ -3,6 +3,10 @@ resource "kubernetes_namespace_v1" "argocd" {
     name = "argocd"
   }
 
+  timeouts {
+    delete = "45m"
+  }
+
   depends_on = [module.gke]
 }
 
@@ -13,8 +17,12 @@ resource "helm_release" "argocd" {
   version          = var.argocd_chart_version
   namespace        = kubernetes_namespace_v1.argocd.metadata[0].name
   create_namespace = false
-  wait             = true
+  wait             = var.helm_release_wait
   timeout          = 900
+
+  timeouts = {
+    delete = "45m"
+  }
 
   values = [
     yamlencode({
@@ -112,6 +120,10 @@ resource "kubernetes_deployment_v1" "argocd_cloudflared" {
   }
 
   depends_on = [kubernetes_secret_v1.argocd_cloudflared_token]
+
+  timeouts {
+    delete = "15m"
+  }
 }
 
 resource "kubernetes_namespace_v1" "vault_secrets_operator" {
@@ -119,6 +131,10 @@ resource "kubernetes_namespace_v1" "vault_secrets_operator" {
 
   metadata {
     name = "vault-secrets-operator-system"
+  }
+
+  timeouts {
+    delete = "45m"
   }
 
   depends_on = [module.gke]
@@ -133,8 +149,12 @@ resource "helm_release" "vault_secrets_operator" {
   version          = var.vault_secrets_operator_chart_version
   namespace        = kubernetes_namespace_v1.vault_secrets_operator[0].metadata[0].name
   create_namespace = false
-  wait             = true
+  wait             = var.helm_release_wait
   timeout          = 600
+
+  timeouts = {
+    delete = "45m"
+  }
 
   depends_on = [kubernetes_namespace_v1.vault_secrets_operator]
 }
@@ -170,7 +190,35 @@ resource "kubernetes_namespace_v1" "projectx" {
     name = "projectx"
   }
 
+  timeouts {
+    delete = "45m"
+  }
+
   depends_on = [module.gke]
+}
+
+# Ensures destroy order: argocd-apps Helm is removed first, then this runs (local kubectl),
+# then the projectx namespace. Helps when Argo leaves workloads/finalizers that block namespace deletion.
+resource "terraform_data" "projectx_destroy_cleanup" {
+  depends_on = [
+    module.gke,
+    helm_release.argocd,
+    kubernetes_namespace_v1.projectx,
+  ]
+
+  input = join("|", [var.cluster_name, var.gcp_region, var.gcp_project_id])
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      set +e
+      gcloud container clusters get-credentials "${element(split("|", self.input), 0)}" --region "${element(split("|", self.input), 1)}" --project "${element(split("|", self.input), 2)}" --quiet || true
+      kubectl delete application projectx-api -n argocd --ignore-not-found --wait=false 2>/dev/null || true
+      kubectl delete all --all -n projectx --ignore-not-found --wait=false 2>/dev/null || true
+      kubectl delete pvc,secret,configmap,ingress,networkpolicy --all -n projectx --ignore-not-found --wait=false 2>/dev/null || true
+      exit 0
+    EOT
+  }
 }
 
 # Cloudflare tunnel token for the projectx app (used by values.yaml cloudflareTunnel).
@@ -193,8 +241,12 @@ resource "helm_release" "argocd_apps" {
   chart            = "argocd-apps"
   namespace        = kubernetes_namespace_v1.argocd.metadata[0].name
   create_namespace = false
-  wait             = true
+  wait             = var.helm_release_wait
   timeout          = 600
+
+  timeouts = {
+    delete = "45m"
+  }
 
   values = [
     yamlencode({
@@ -233,5 +285,6 @@ resource "helm_release" "argocd_apps" {
     helm_release.vault_secrets_operator,
     kubernetes_secret_v1.argocd_repo,
     kubernetes_namespace_v1.projectx,
+    terraform_data.projectx_destroy_cleanup,
   ]
 }

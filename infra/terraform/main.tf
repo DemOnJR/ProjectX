@@ -1,11 +1,14 @@
 data "google_client_config" "default" {}
 
 data "http" "terraform_client_ip" {
-  url = "https://checkip.amazonaws.com"
+  count = var.gke_master_authorized_include_current_ip ? 1 : 0
+
+  url                = "https://checkip.amazonaws.com"
+  request_timeout_ms = 20000
 }
 
 locals {
-  terraform_client_cidr = "${chomp(data.http.terraform_client_ip.response_body)}/32"
+  terraform_client_cidr = var.gke_master_authorized_include_current_ip ? "${chomp(data.http.terraform_client_ip[0].response_body)}/32" : ""
   use_private_gitops    = var.gitops_repo_username != "" && var.gitops_repo_password != ""
   ar_repo_url           = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/${var.artifact_registry_repository_id}"
 }
