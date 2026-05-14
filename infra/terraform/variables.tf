@@ -155,6 +155,18 @@ variable "github_repo" {
   }
 }
 
+variable "github_wif_pool_id" {
+  description = "Workload Identity Pool ID for GitHub Actions (final segment of the pool resource name). Must match an existing pool when github_wif_use_existing_pool is true."
+  type        = string
+  default     = "github-actions"
+}
+
+variable "github_wif_use_existing_pool" {
+  description = "When true, Terraform does not create google_iam_workload_identity_pool.github and instead reads the pool github_wif_pool_id from GCP. Use when apply fails with 409 (pool already exists in the project but is absent from state). Do not turn this on if that pool is already in Terraform state with github_wif_use_existing_pool false, or the next plan can destroy the managed pool; in that case use terraform import instead."
+  type        = bool
+  default     = false
+}
+
 variable "vault_address" {
   description = "Vault URL for the root module provider (e.g. https://vault.pbcv.dev). Token: export VAULT_TOKEN before terraform apply when write_ci_secrets_to_vault is true."
   type        = string

@@ -2,18 +2,36 @@
 # No service account keys are ever created or stored.
 
 resource "google_iam_workload_identity_pool" "github" {
-  count                     = var.github_repo != "" ? 1 : 0
-  workload_identity_pool_id = "github-actions"
+  count                     = var.github_repo != "" && !var.github_wif_use_existing_pool ? 1 : 0
+  workload_identity_pool_id = var.github_wif_pool_id
   display_name              = "GitHub Actions"
   description               = "WIF pool for ProjectX CI"
 
   depends_on = [google_project_service.services]
 }
 
+data "google_iam_workload_identity_pool" "github_existing" {
+  count                     = var.github_repo != "" && var.github_wif_use_existing_pool ? 1 : 0
+  workload_identity_pool_id = var.github_wif_pool_id
+}
+
+locals {
+  github_wif_pool_id = var.github_repo == "" ? "" : (
+    var.github_wif_use_existing_pool
+    ? data.google_iam_workload_identity_pool.github_existing[0].workload_identity_pool_id
+    : google_iam_workload_identity_pool.github[0].workload_identity_pool_id
+  )
+  github_wif_pool_name = var.github_repo == "" ? "" : (
+    var.github_wif_use_existing_pool
+    ? data.google_iam_workload_identity_pool.github_existing[0].name
+    : google_iam_workload_identity_pool.github[0].name
+  )
+}
+
 resource "google_iam_workload_identity_pool_provider" "github" {
   count = var.github_repo != "" ? 1 : 0
 
-  workload_identity_pool_id          = google_iam_workload_identity_pool.github[0].workload_identity_pool_id
+  workload_identity_pool_id          = local.github_wif_pool_id
   workload_identity_pool_provider_id = "github-provider"
   display_name                       = "GitHub OIDC"
 
@@ -29,6 +47,12 @@ resource "google_iam_workload_identity_pool_provider" "github" {
   oidc {
     issuer_uri = "https://token.actions.githubusercontent.com"
   }
+
+  depends_on = [
+    google_project_service.services,
+    google_iam_workload_identity_pool.github,
+    data.google_iam_workload_identity_pool.github_existing,
+  ]
 }
 
 resource "google_service_account" "ci" {
@@ -59,5 +83,5 @@ resource "google_service_account_iam_member" "ci_wif_binding" {
   count              = var.github_repo != "" ? 1 : 0
   service_account_id = google_service_account.ci[0].name
   role               = "roles/iam.workloadIdentityUser"
-  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github[0].name}/attribute.repository/${var.github_repo}"
+  member             = "principalSet://iam.googleapis.com/${local.github_wif_pool_name}/attribute.repository/${var.github_repo}"
 }
