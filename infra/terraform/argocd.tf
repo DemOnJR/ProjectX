@@ -214,6 +214,9 @@ resource "terraform_data" "projectx_destroy_cleanup" {
       set +e
       gcloud container clusters get-credentials "${element(split("|", self.input), 0)}" --region "${element(split("|", self.input), 1)}" --project "${element(split("|", self.input), 2)}" --quiet || true
       kubectl delete application projectx-api -n argocd --ignore-not-found --wait=false 2>/dev/null || true
+      kubectl delete vaultauth --all -n projectx --ignore-not-found --wait=false 2>/dev/null || true
+      kubectl delete vaultconnection --all -n projectx --ignore-not-found --wait=false 2>/dev/null || true
+      kubectl delete vaultstaticsecret --all -n projectx --ignore-not-found --wait=false 2>/dev/null || true
       kubectl delete all --all -n projectx --ignore-not-found --wait=false 2>/dev/null || true
       kubectl delete pvc,secret,configmap,ingress,networkpolicy --all -n projectx --ignore-not-found --wait=false 2>/dev/null || true
       exit 0
