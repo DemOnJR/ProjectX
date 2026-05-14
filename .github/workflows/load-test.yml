@@ -44,7 +44,7 @@ jobs:
             ${{ secrets.VAULT_CI_SECRET_PATH }} gcp_region | GCP_REGION
 
       - name: "🔑 Authenticate to Google Cloud"
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ env.WIF_PROVIDER }}
           service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
@@ -111,7 +111,7 @@ jobs:
             ${{ secrets.VAULT_CI_SECRET_PATH }} app_url | APP_URL
 
       - name: "🔑 Authenticate to Google Cloud"
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ env.WIF_PROVIDER }}
           service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
@@ -198,7 +198,7 @@ jobs:
             ${{ secrets.VAULT_CI_SECRET_PATH }} gcp_region | GCP_REGION
 
       - name: "🔑 Authenticate to Google Cloud"
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ env.WIF_PROVIDER }}
           service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
