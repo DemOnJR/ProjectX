@@ -17,9 +17,65 @@ permissions:
   id-token: write   # required for Workload Identity Federation
 
 jobs:
-  load-test:
-    name: "🔥 Load Test & Scale Watch"
+  # ────────────────────────────────────────────────────────────────────────────
+  # 1 · HPA BEFORE
+  #     Snapshot cluster autoscaling state before traffic (requires kubectl →
+  #     GKE DNS control plane, not the public app URL).
+  # ────────────────────────────────────────────────────────────────────────────
+  hpa-before:
+    name: "📸 HPA — before"
     runs-on: ubuntu-latest
+    outputs:
+      replicas_before: ${{ steps.snapshot.outputs.replicas_before }}
+
+    steps:
+      - name: "🔑 Authenticate to Google Cloud"
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: "☁️ Set up gcloud"
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          version: ">= 450.0.0"
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          install_components: gke-gcloud-auth-plugin
+
+      - name: "☸️  Get GKE credentials (DNS control plane)"
+        run: |
+          set -euo pipefail
+          echo "KUBECONFIG=${RUNNER_TEMP}/kubeconfig" >> "$GITHUB_ENV"
+          export KUBECONFIG="${RUNNER_TEMP}/kubeconfig"
+          gcloud container clusters get-credentials "${{ secrets.GCP_CLUSTER_NAME }}" \
+            --region "${{ secrets.GCP_REGION }}" \
+            --project "${{ secrets.GCP_PROJECT_ID }}" \
+            --dns-endpoint
+          echo "kubectl API server:"
+          kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}{"\n"}'
+
+      - name: "📸 HPA snapshot — BEFORE"
+        id: snapshot
+        run: |
+          echo "### HPA before load test" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          kubectl get hpa projectx-api -n projectx | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          REPLICAS_BEFORE=$(kubectl get deployment projectx-api -n projectx \
+            -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+          echo "replicas_before=${REPLICAS_BEFORE}" >> "$GITHUB_OUTPUT"
+          echo "  Replicas before: ${REPLICAS_BEFORE}"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # 2 · LOAD TEST
+  #     Playwright traffic against APP_URL; HPA watcher runs in the same step
+  #     so the background loop is not killed when a step ends.
+  # ────────────────────────────────────────────────────────────────────────────
+  load-test:
+    name: "🔥 Load test + watch"
+    runs-on: ubuntu-latest
+    needs: hpa-before
 
     steps:
       - name: "📥 Checkout"
@@ -31,28 +87,22 @@ jobs:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
-      # Use the DNS-based control plane endpoint so kubectl works from GitHub-hosted
-      # runners (IAM auth). The default IP endpoint is blocked by master_authorized_networks.
-      - name: "☸️  Get GKE credentials"
-        uses: google-github-actions/get-gke-credentials@v2
+      - name: "☁️ Set up gcloud"
+        uses: google-github-actions/setup-gcloud@v2
         with:
-          cluster_name: ${{ secrets.GCP_CLUSTER_NAME }}
-          location: ${{ secrets.GCP_REGION }}
+          version: ">= 450.0.0"
           project_id: ${{ secrets.GCP_PROJECT_ID }}
-          use_dns_based_endpoint: true
+          install_components: gke-gcloud-auth-plugin
 
-      - name: "📸 HPA snapshot — BEFORE"
-        id: before
+      - name: "☸️  Get GKE credentials (DNS control plane)"
         run: |
-          echo "### HPA before load test" | tee -a "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          kubectl get hpa projectx-api -n projectx | tee -a "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-
-          REPLICAS_BEFORE=$(kubectl get deployment projectx-api -n projectx \
-            -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
-          echo "replicas_before=${REPLICAS_BEFORE}" >> "$GITHUB_OUTPUT"
-          echo "  Replicas before: ${REPLICAS_BEFORE}"
+          set -euo pipefail
+          echo "KUBECONFIG=${RUNNER_TEMP}/kubeconfig" >> "$GITHUB_ENV"
+          export KUBECONFIG="${RUNNER_TEMP}/kubeconfig"
+          gcloud container clusters get-credentials "${{ secrets.GCP_CLUSTER_NAME }}" \
+            --region "${{ secrets.GCP_REGION }}" \
+            --project "${{ secrets.GCP_PROJECT_ID }}" \
+            --dns-endpoint
 
       - name: "🐍 Set up Python"
         uses: actions/setup-python@v5
@@ -70,9 +120,9 @@ jobs:
       # new shell; background jobs from a previous step are killed when that step ends.
       - name: "🔥 Run load test + HPA watch"
         env:
-          APP_URL:     ${{ secrets.APP_URL }}
-          CONCURRENCY: ${{ inputs.concurrency }}
-          DURATION:    ${{ inputs.duration }}
+          APP_URL: ${{ secrets.APP_URL }}
+          CONCURRENCY: ${{ github.event.inputs.concurrency }}
+          DURATION: ${{ github.event.inputs.duration }}
         run: |
           set -euo pipefail
           (
@@ -94,11 +144,45 @@ jobs:
           trap 'kill "${WATCHER_PID}" 2>/dev/null || true; wait "${WATCHER_PID}" 2>/dev/null || true' EXIT
           python tests/load/test_autoscale.py
 
-      - name: "📸 HPA snapshot — AFTER"
-        if: always()
-        id: after
+  # ────────────────────────────────────────────────────────────────────────────
+  # 3 · HPA AFTER + RESULTS
+  #     Snapshot after traffic and write the summary table (runs when the load
+  #     job finished success or failure, but not when it was skipped).
+  # ────────────────────────────────────────────────────────────────────────────
+  hpa-after:
+    name: "📸 HPA — after + summary"
+    runs-on: ubuntu-latest
+    needs: [hpa-before, load-test]
+    if: ${{ always() && needs.hpa-before.result == 'success' && (needs.load-test.result == 'success' || needs.load-test.result == 'failure') }}
+    steps:
+      - name: "🔑 Authenticate to Google Cloud"
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: "☁️ Set up gcloud"
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          version: ">= 450.0.0"
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          install_components: gke-gcloud-auth-plugin
+
+      - name: "☸️  Get GKE credentials (DNS control plane)"
         run: |
-          echo "### HPA after load test" | tee -a "$GITHUB_STEP_SUMMARY"
+          set -euo pipefail
+          echo "KUBECONFIG=${RUNNER_TEMP}/kubeconfig" >> "$GITHUB_ENV"
+          export KUBECONFIG="${RUNNER_TEMP}/kubeconfig"
+          gcloud container clusters get-credentials "${{ secrets.GCP_CLUSTER_NAME }}" \
+            --region "${{ secrets.GCP_REGION }}" \
+            --project "${{ secrets.GCP_PROJECT_ID }}" \
+            --dns-endpoint
+
+      - name: "📸 HPA snapshot — AFTER"
+        id: after
+        if: always()
+        run: |
+          echo "### HPA after load test" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           kubectl get hpa projectx-api -n projectx | tee -a "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
@@ -111,8 +195,8 @@ jobs:
       - name: "📋 Write summary"
         if: always()
         env:
-          BEFORE: ${{ steps.before.outputs.replicas_before }}
-          AFTER:  ${{ steps.after.outputs.replicas_after }}
+          BEFORE: ${{ needs.hpa-before.outputs.replicas_before }}
+          AFTER: ${{ steps.after.outputs.replicas_after }}
         run: |
           B=0; [[ "${BEFORE:-}" =~ ^[0-9]+$ ]] && B="${BEFORE}"
           A=0; [[ "${AFTER:-}" =~ ^[0-9]+$ ]] && A="${AFTER}"
@@ -126,8 +210,8 @@ jobs:
             echo ""
             echo "| | |"
             echo "|:---|:---|"
-            echo "| **Workers**        | ${{ inputs.concurrency }} parallel Playwright contexts |"
-            echo "| **Duration**       | ${{ inputs.duration }}s |"
+            echo "| **Workers**        | ${{ github.event.inputs.concurrency }} parallel Playwright contexts |"
+            echo "| **Duration**       | ${{ github.event.inputs.duration }}s |"
             echo "| **Replicas before**| \`${B}\` |"
             echo "| **Replicas after** | \`${A}\` |"
             echo "| **Auto-scaled?**   | ${SCALED} |"
