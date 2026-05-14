@@ -62,7 +62,7 @@ jobs:
             | gzip > image.tar.gz
 
       - name: "⬆️  Upload image artifact"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: docker-image-${{ steps.tag.outputs.tag }}
           path: image.tar.gz
@@ -93,7 +93,7 @@ jobs:
             ${{ secrets.VAULT_CI_SECRET_PATH }} registry | REGISTRY
 
       - name: "⬇️  Download image artifact"
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: docker-image-${{ needs.build.outputs.tag }}
 
