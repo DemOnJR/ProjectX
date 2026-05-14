@@ -11,8 +11,10 @@ terraform {
       version = "7.32.0"
     }
     kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 3.0"
+      source = "hashicorp/kubernetes"
+      # Pin 2.x until terraform-google-modules/kubernetes-engine uses kubernetes_config_map_v1
+      # for ip_masq_agent (avoids noisy deprecation warnings from provider 3.x).
+      version = "~> 2.29"
     }
     helm = {
       source  = "hashicorp/helm"
@@ -22,9 +24,9 @@ terraform {
       source  = "hashicorp/http"
       version = "~> 3.4"
     }
-    github = {
-      source  = "integrations/github"
-      version = "~> 6.2"
+    vault = {
+      source  = "hashicorp/vault"
+      version = "~> 4.0"
     }
   }
 }
@@ -51,4 +53,8 @@ provider "helm" {
     token                  = data.google_client_config.default.access_token
     cluster_ca_certificate = base64decode(module.gke.ca_certificate)
   }
+}
+
+provider "vault" {
+  address = var.vault_address
 }

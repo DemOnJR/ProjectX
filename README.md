@@ -56,10 +56,20 @@ Edit `infra/terraform/terraform.tfvars`, then run:
 
 ```bash
 cd infra/terraform
+export VAULT_TOKEN="..."   # required when write_ci_secrets_to_vault is true (CI secrets → Vault KV)
 terraform init
 terraform plan
 terraform apply
 ```
+
+If your state still contains legacy `github_actions_secret.*` from an older revision, remove them from Terraform state once (`terraform state rm '<address>'`) so the plan does not reference the removed GitHub provider.
+
+### CI secrets (Vault + GitHub Actions)
+
+- `infra/terraform/vault-ci.tf` writes CI fields to Vault KV v2 at `kv/data/ci/projectx` (keys: `wif_provider`, `gcp_service_account`, `gcp_project_id`, `registry`, `gitops_pat`, `app_url`, `gcp_cluster_name`, `gcp_region`).
+- `infra/terraform-vault/github-jwt.tf` enables JWT auth for GitHub OIDC so workflows can read that path.
+- In the **ProjectX** GitHub repo, add Actions **Secrets** (not Variables) so values are **redacted in logs**: `VAULT_ADDR`, `VAULT_JWT_PATH` (e.g. `jwt-github`), `VAULT_JWT_ROLE` (e.g. `github-ci-projectx`), `VAULT_CI_SECRET_PATH` (`kv/data/ci/projectx`).
+- Apply `infra/terraform-vault` after the cluster exists so the JWT mount and role are present.
 
 After apply, connect to the cluster:
 

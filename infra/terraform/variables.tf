@@ -81,6 +81,15 @@ variable "node_max_count" {
   default     = 4
 }
 
+variable "extra_gke_master_authorized_networks" {
+  description = "Extra CIDRs allowed to reach the GKE control plane (in addition to the Terraform client IP from data.http). Use stable /32s (office, VPN) so plan/destroy still works if your home IP changes and master_authorized_networks would otherwise lock you out (Kubernetes API Unauthorized)."
+  type = list(object({
+    cidr_block   = string
+    display_name = string
+  }))
+  default = []
+}
+
 variable "artifact_registry_repository_id" {
   description = "Artifact Registry Docker repository ID."
   type        = string
@@ -136,33 +145,48 @@ variable "gitops_app_path" {
 }
 
 variable "github_repo" {
-  description = "GitHub repository in owner/repo format (e.g. DemOnJR/ProjectX). Used to create the Workload Identity Federation binding for CI. Leave empty to skip."
+  description = "GitHub repository in owner/repo format (e.g. DemOnJR/ProjectX). Used for Workload Identity Federation binding for CI. When set with write_ci_secrets_to_vault, CI material is written to Vault KV for GitHub Actions (JWT auth). Leave empty to skip."
   type        = string
   default     = ""
+
+  validation {
+    condition     = var.github_repo == "" || var.write_ci_secrets_to_vault
+    error_message = "When github_repo is set, write_ci_secrets_to_vault must be true so CI can read secrets from Vault (or clear github_repo to skip WIF CI)."
+  }
 }
 
-variable "github_token" {
-  description = <<-EOT
-    GitHub token used by Terraform to create and delete Actions secrets on github_repo.
-    Classic PAT: repo scope. Fine-grained: access to github_repo with "Secrets" read and write.
-    terraform destroy loads the same tfvars / -var-file / TF_VAR_github_token as apply, and uses this token to remove github_actions_secret resources before dependent GCP resources are torn down — keep a valid token until destroy finishes, or export GITHUB_TOKEN with the same PAT and leave this empty (see github provider in github-ci.tf).
-    401 errors on plan/apply/destroy mean the token is expired, revoked, or lacks those permissions — create a new PAT and update this value.
-    Until the token is fixed, you can run terraform plan/apply with -refresh=false to change GCP resources without the provider calling the GitHub API (use sparingly; refresh drift is possible).
-    Leave empty to skip creating github_actions_secret resources (github_repo must still be set for WIF in ci.tf).
-  EOT
+variable "vault_address" {
+  description = "Vault URL for the root module provider (e.g. https://vault.pbcv.dev). Token: export VAULT_TOKEN before terraform apply when write_ci_secrets_to_vault is true."
   type        = string
-  sensitive   = true
-  default     = ""
+  default     = "https://vault.pbcv.dev"
+}
+
+variable "write_ci_secrets_to_vault" {
+  description = "When true and github_repo is set, write CI key material to Vault KV (path vault_ci_secret_name on vault_ci_kv_mount). Requires VAULT_TOKEN in the environment during apply."
+  type        = bool
+  default     = true
+}
+
+variable "vault_ci_kv_mount" {
+  description = "KV v2 mount for CI secrets written by this module."
+  type        = string
+  default     = "kv"
+}
+
+variable "vault_ci_secret_name" {
+  description = "KV v2 secret name (path without mount), e.g. ci/projectx."
+  type        = string
+  default     = "ci/projectx"
 }
 
 variable "app_url" {
-  description = "Public URL of the deployed app (e.g. https://projectx.pbcv.dev). Used as APP_URL Actions secret for post-deploy health checks."
+  description = "Public URL of the deployed app (e.g. https://projectx.pbcv.dev). Stored in Vault KV for the CI verify step."
   type        = string
   default     = ""
 }
 
 variable "github_gitops_pat" {
-  description = "GitHub PAT (repo scope on ProjectX-ArgoCD) injected as the GITOPS_PAT Actions secret so CI can push image tags. Also written to Vault for central secret management. Leave empty to skip."
+  description = "GitHub PAT (repo scope on ProjectX-ArgoCD) for CI to push image tags. Stored in Vault KV (not GitHub Actions secrets). Leave empty to skip writing gitops_pat."
   type        = string
   sensitive   = true
   default     = ""

@@ -8,7 +8,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write   # required for Workload Identity Federation
+  id-token: write   # GitHub OIDC → Vault JWT + Workload Identity Federation
 
 jobs:
   # ────────────────────────────────────────────────────────────────────────────
@@ -30,13 +30,24 @@ jobs:
       - name: "📥 Checkout"
         uses: actions/checkout@v4
 
+      - name: "🔐 Vault (JWT) — CI secrets"
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ secrets.VAULT_ADDR }}
+          method: jwt
+          path: ${{ secrets.VAULT_JWT_PATH }}
+          role: ${{ secrets.VAULT_JWT_ROLE }}
+          secrets: |
+            ${{ secrets.VAULT_CI_SECRET_PATH }} gcp_project_id | GCP_PROJECT_ID
+            ${{ secrets.VAULT_CI_SECRET_PATH }} registry | REGISTRY
+
       - name: "🏷️  Set image tag"
         id: tag
         run: echo "tag=${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
 
       - name: "🏗️  Build image"
         run: |
-          IMAGE_REF="${{ secrets.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/${REPO}/${IMAGE}"
+          IMAGE_REF="${REGISTRY}/${GCP_PROJECT_ID}/${REPO}/${IMAGE}"
           docker build \
             --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
             --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
@@ -46,7 +57,7 @@ jobs:
 
       - name: "💾 Export image to artifact"
         run: |
-          IMAGE_REF="${{ secrets.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/${REPO}/${IMAGE}"
+          IMAGE_REF="${REGISTRY}/${GCP_PROJECT_ID}/${REPO}/${IMAGE}"
           docker save "${IMAGE_REF}:${{ steps.tag.outputs.tag }}" "${IMAGE_REF}:latest" \
             | gzip > image.tar.gz
 
@@ -68,6 +79,19 @@ jobs:
     needs: build
 
     steps:
+      - name: "🔐 Vault (JWT) — CI secrets"
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ secrets.VAULT_ADDR }}
+          method: jwt
+          path: ${{ secrets.VAULT_JWT_PATH }}
+          role: ${{ secrets.VAULT_JWT_ROLE }}
+          secrets: |
+            ${{ secrets.VAULT_CI_SECRET_PATH }} wif_provider | WIF_PROVIDER
+            ${{ secrets.VAULT_CI_SECRET_PATH }} gcp_service_account | GCP_SERVICE_ACCOUNT
+            ${{ secrets.VAULT_CI_SECRET_PATH }} gcp_project_id | GCP_PROJECT_ID
+            ${{ secrets.VAULT_CI_SECRET_PATH }} registry | REGISTRY
+
       - name: "⬇️  Download image artifact"
         uses: actions/download-artifact@v4
         with:
@@ -79,18 +103,18 @@ jobs:
       - name: "🔑 Authenticate to Google Cloud"
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
 
       - name: "🐳 Configure Docker → Artifact Registry"
-        run: gcloud auth configure-docker ${{ secrets.REGISTRY }} --quiet
+        run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
 
       - name: "🚀 Push to Artifact Registry"
         env:
           REPO:  projectx
           IMAGE: projectx-api
         run: |
-          IMAGE_REF="${{ secrets.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/${REPO}/${IMAGE}"
+          IMAGE_REF="${REGISTRY}/${GCP_PROJECT_ID}/${REPO}/${IMAGE}"
           docker push "${IMAGE_REF}:${{ needs.build.outputs.tag }}"
           docker push "${IMAGE_REF}:latest"
 
@@ -109,9 +133,19 @@ jobs:
       GITOPS_VALUES: apps/projectx-api/values.yaml
 
     steps:
+      - name: "🔐 Vault (JWT) — CI secrets"
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ secrets.VAULT_ADDR }}
+          method: jwt
+          path: ${{ secrets.VAULT_JWT_PATH }}
+          role: ${{ secrets.VAULT_JWT_ROLE }}
+          secrets: |
+            ${{ secrets.VAULT_CI_SECRET_PATH }} gitops_pat | GITOPS_PAT
+
       - name: "📝 Update GitOps manifest"
         env:
-          GH_TOKEN:  ${{ secrets.GITOPS_PAT }}
+          GH_TOKEN:  ${{ env.GITOPS_PAT }}
           IMAGE_TAG: ${{ needs.build.outputs.tag }}
         run: |
           git clone "https://x-access-token:${GH_TOKEN}@github.com/${GITOPS_REPO}.git" gitops
@@ -139,18 +173,28 @@ jobs:
     needs: [build, deploy]
 
     steps:
+      - name: "🔐 Vault (JWT) — CI secrets"
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ secrets.VAULT_ADDR }}
+          method: jwt
+          path: ${{ secrets.VAULT_JWT_PATH }}
+          role: ${{ secrets.VAULT_JWT_ROLE }}
+          secrets: |
+            ${{ secrets.VAULT_CI_SECRET_PATH }} app_url | APP_URL
+
       - name: "🩺 Health check"
         id: healthcheck
         run: |
           echo "Waiting 45 s for ArgoCD to pick up the GitOps change..."
           sleep 45
-          echo "Polling ${{ secrets.APP_URL }}/healthz (20 attempts × 15 s = 5 min)"
+          echo "Polling health endpoint /healthz (20 attempts × 15 s = 5 min)"
           for i in $(seq 1 20); do
             HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
-              --max-time 5 "${{ secrets.APP_URL }}/healthz" 2>/dev/null || echo "000")
+              --max-time 5 "${APP_URL}/healthz" 2>/dev/null || echo "000")
             echo "  Attempt ${i}/20 → HTTP ${HTTP}"
             if [ "${HTTP}" = "200" ]; then
-              BODY=$(curl -s --max-time 5 "${{ secrets.APP_URL }}/healthz")
+              BODY=$(curl -s --max-time 5 "${APP_URL}/healthz")
               echo "  ✅ ${BODY}"
               echo "status=healthy" >> "$GITHUB_OUTPUT"
               break
@@ -178,5 +222,5 @@ jobs:
             echo "| **Image tag** | \`${TAG}\` |"
             echo "| **Commit**    | [\`${GITHUB_SHA::8}\`](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}) |"
             echo "| **Actor**     | @${GITHUB_ACTOR} |"
-            echo "| **App**       | ${{ secrets.APP_URL }} |"
+            echo "| **App**       | (health check target — URL not printed in public summary) |"
           } >> "$GITHUB_STEP_SUMMARY"

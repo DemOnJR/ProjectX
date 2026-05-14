@@ -24,12 +24,12 @@ output "argocd_initial_password_command" {
 }
 
 output "ci_wif_provider" {
-  description = "Workload Identity Federation provider — set as GHA variable WIF_PROVIDER."
+  description = "Workload Identity Federation provider resource name (also written to Vault KV when write_ci_secrets_to_vault is true)."
   value       = var.github_repo != "" ? google_iam_workload_identity_pool_provider.github[0].name : "github_repo variable not set"
 }
 
 output "ci_service_account" {
-  description = "CI service account email — set as GHA variable GCP_SERVICE_ACCOUNT."
+  description = "CI service account email (also written to Vault KV when write_ci_secrets_to_vault is true)."
   value       = var.github_repo != "" ? google_service_account.ci[0].email : "github_repo variable not set"
 }
 

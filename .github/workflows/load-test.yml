@@ -14,7 +14,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write   # required for Workload Identity Federation
+  id-token: write   # GitHub OIDC → Vault JWT + Workload Identity Federation
 
 jobs:
   # ────────────────────────────────────────────────────────────────────────────
@@ -29,17 +29,31 @@ jobs:
       replicas_before: ${{ steps.snapshot.outputs.replicas_before }}
 
     steps:
+      - name: "🔐 Vault (JWT) — CI secrets"
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ secrets.VAULT_ADDR }}
+          method: jwt
+          path: ${{ secrets.VAULT_JWT_PATH }}
+          role: ${{ secrets.VAULT_JWT_ROLE }}
+          secrets: |
+            ${{ secrets.VAULT_CI_SECRET_PATH }} wif_provider | WIF_PROVIDER
+            ${{ secrets.VAULT_CI_SECRET_PATH }} gcp_service_account | GCP_SERVICE_ACCOUNT
+            ${{ secrets.VAULT_CI_SECRET_PATH }} gcp_project_id | GCP_PROJECT_ID
+            ${{ secrets.VAULT_CI_SECRET_PATH }} gcp_cluster_name | GCP_CLUSTER_NAME
+            ${{ secrets.VAULT_CI_SECRET_PATH }} gcp_region | GCP_REGION
+
       - name: "🔑 Authenticate to Google Cloud"
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
 
       - name: "☁️ Set up gcloud"
         uses: google-github-actions/setup-gcloud@v2
         with:
           version: ">= 450.0.0"
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
           install_components: gke-gcloud-auth-plugin
 
       - name: "☸️  Get GKE credentials (DNS control plane)"
@@ -47,9 +61,9 @@ jobs:
           set -euo pipefail
           echo "KUBECONFIG=${RUNNER_TEMP}/kubeconfig" >> "$GITHUB_ENV"
           export KUBECONFIG="${RUNNER_TEMP}/kubeconfig"
-          gcloud container clusters get-credentials "${{ secrets.GCP_CLUSTER_NAME }}" \
-            --region "${{ secrets.GCP_REGION }}" \
-            --project "${{ secrets.GCP_PROJECT_ID }}" \
+          gcloud container clusters get-credentials "${GCP_CLUSTER_NAME}" \
+            --region "${GCP_REGION}" \
+            --project "${GCP_PROJECT_ID}" \
             --dns-endpoint
           echo "kubectl API server:"
           kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}{"\n"}'
@@ -81,17 +95,32 @@ jobs:
       - name: "📥 Checkout"
         uses: actions/checkout@v4
 
+      - name: "🔐 Vault (JWT) — CI secrets"
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ secrets.VAULT_ADDR }}
+          method: jwt
+          path: ${{ secrets.VAULT_JWT_PATH }}
+          role: ${{ secrets.VAULT_JWT_ROLE }}
+          secrets: |
+            ${{ secrets.VAULT_CI_SECRET_PATH }} wif_provider | WIF_PROVIDER
+            ${{ secrets.VAULT_CI_SECRET_PATH }} gcp_service_account | GCP_SERVICE_ACCOUNT
+            ${{ secrets.VAULT_CI_SECRET_PATH }} gcp_project_id | GCP_PROJECT_ID
+            ${{ secrets.VAULT_CI_SECRET_PATH }} gcp_cluster_name | GCP_CLUSTER_NAME
+            ${{ secrets.VAULT_CI_SECRET_PATH }} gcp_region | GCP_REGION
+            ${{ secrets.VAULT_CI_SECRET_PATH }} app_url | APP_URL
+
       - name: "🔑 Authenticate to Google Cloud"
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
 
       - name: "☁️ Set up gcloud"
         uses: google-github-actions/setup-gcloud@v2
         with:
           version: ">= 450.0.0"
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
           install_components: gke-gcloud-auth-plugin
 
       - name: "☸️  Get GKE credentials (DNS control plane)"
@@ -99,9 +128,9 @@ jobs:
           set -euo pipefail
           echo "KUBECONFIG=${RUNNER_TEMP}/kubeconfig" >> "$GITHUB_ENV"
           export KUBECONFIG="${RUNNER_TEMP}/kubeconfig"
-          gcloud container clusters get-credentials "${{ secrets.GCP_CLUSTER_NAME }}" \
-            --region "${{ secrets.GCP_REGION }}" \
-            --project "${{ secrets.GCP_PROJECT_ID }}" \
+          gcloud container clusters get-credentials "${GCP_CLUSTER_NAME}" \
+            --region "${GCP_REGION}" \
+            --project "${GCP_PROJECT_ID}" \
             --dns-endpoint
 
       - name: "🐍 Set up Python"
@@ -120,7 +149,6 @@ jobs:
       # new shell; background jobs from a previous step are killed when that step ends.
       - name: "🔥 Run load test + HPA watch"
         env:
-          APP_URL: ${{ secrets.APP_URL }}
           CONCURRENCY: ${{ github.event.inputs.concurrency }}
           DURATION: ${{ github.event.inputs.duration }}
         run: |
@@ -155,17 +183,31 @@ jobs:
     needs: [hpa-before, load-test]
     if: ${{ always() && needs.hpa-before.result == 'success' && (needs.load-test.result == 'success' || needs.load-test.result == 'failure') }}
     steps:
+      - name: "🔐 Vault (JWT) — CI secrets"
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ secrets.VAULT_ADDR }}
+          method: jwt
+          path: ${{ secrets.VAULT_JWT_PATH }}
+          role: ${{ secrets.VAULT_JWT_ROLE }}
+          secrets: |
+            ${{ secrets.VAULT_CI_SECRET_PATH }} wif_provider | WIF_PROVIDER
+            ${{ secrets.VAULT_CI_SECRET_PATH }} gcp_service_account | GCP_SERVICE_ACCOUNT
+            ${{ secrets.VAULT_CI_SECRET_PATH }} gcp_project_id | GCP_PROJECT_ID
+            ${{ secrets.VAULT_CI_SECRET_PATH }} gcp_cluster_name | GCP_CLUSTER_NAME
+            ${{ secrets.VAULT_CI_SECRET_PATH }} gcp_region | GCP_REGION
+
       - name: "🔑 Authenticate to Google Cloud"
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
 
       - name: "☁️ Set up gcloud"
         uses: google-github-actions/setup-gcloud@v2
         with:
           version: ">= 450.0.0"
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
           install_components: gke-gcloud-auth-plugin
 
       - name: "☸️  Get GKE credentials (DNS control plane)"
@@ -173,9 +215,9 @@ jobs:
           set -euo pipefail
           echo "KUBECONFIG=${RUNNER_TEMP}/kubeconfig" >> "$GITHUB_ENV"
           export KUBECONFIG="${RUNNER_TEMP}/kubeconfig"
-          gcloud container clusters get-credentials "${{ secrets.GCP_CLUSTER_NAME }}" \
-            --region "${{ secrets.GCP_REGION }}" \
-            --project "${{ secrets.GCP_PROJECT_ID }}" \
+          gcloud container clusters get-credentials "${GCP_CLUSTER_NAME}" \
+            --region "${GCP_REGION}" \
+            --project "${GCP_PROJECT_ID}" \
             --dns-endpoint
 
       - name: "📸 HPA snapshot — AFTER"
@@ -215,5 +257,5 @@ jobs:
             echo "| **Replicas before**| \`${B}\` |"
             echo "| **Replicas after** | \`${A}\` |"
             echo "| **Auto-scaled?**   | ${SCALED} |"
-            echo "| **App URL**        | (from APP_URL secret) |"
+            echo "| **App URL**        | (from APP_URL in Vault) |"
           } >> "$GITHUB_STEP_SUMMARY"

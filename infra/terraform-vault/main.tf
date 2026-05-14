@@ -71,18 +71,3 @@ resource "vault_kv_secret_v2" "argocd_cloudflared" {
     token = var.cloudflare_argocd_token
   })
 }
-
-# Stores the GitHub PAT centrally in Vault so it can be audited and rotated
-# from one place. Terraform also sets it directly as a GitHub Actions secret
-# (in infra/terraform/github-ci.tf), so CI uses ${{ secrets.GITOPS_PAT }}
-# without ever touching Vault at runtime.
-resource "vault_kv_secret_v2" "github_ci" {
-  count = var.github_gitops_pat != "" ? 1 : 0
-
-  mount = var.vault_kv_mount
-  name  = "github"
-
-  data_json = jsonencode({
-    gitops_pat = var.github_gitops_pat
-  })
-}

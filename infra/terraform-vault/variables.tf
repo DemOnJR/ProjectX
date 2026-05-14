@@ -45,6 +45,30 @@ variable "vault_kv_argocd_path" {
   default     = "argocd"
 }
 
+variable "github_repository_full" {
+  description = "GitHub repo allowed to use Vault JWT auth for CI (owner/repo). Must match the Actions workflow repository."
+  type        = string
+  default     = "DemOnJR/ProjectX"
+}
+
+variable "vault_github_jwt_mount_path" {
+  description = "Mount path for the Vault JWT auth method used by GitHub Actions."
+  type        = string
+  default     = "jwt-github"
+}
+
+variable "vault_github_jwt_role_name" {
+  description = "Vault JWT role name passed to vault-action as role=."
+  type        = string
+  default     = "github-ci-projectx"
+}
+
+variable "vault_ci_secret_kv_path" {
+  description = "KV v2 secret path without mount; must match main Terraform vault_ci_secret_name (e.g. ci/projectx)."
+  type        = string
+  default     = "ci/projectx"
+}
+
 variable "cloudflare_projectx_token" {
   description = "Cloudflare tunnel token for the ProjectX API (projectx.pbcv.dev). Written to Vault at kv/projectx."
   type        = string
@@ -54,13 +78,6 @@ variable "cloudflare_projectx_token" {
 
 variable "cloudflare_argocd_token" {
   description = "Cloudflare tunnel token for Argo CD (argocd.pbcv.dev). Written to Vault at kv/argocd."
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "github_gitops_pat" {
-  description = "GitHub PAT (repo scope) for CI to push image tags to ProjectX-ArgoCD. Written to Vault at kv/github so it is centrally managed. Leave empty to skip."
   type        = string
   sensitive   = true
   default     = ""

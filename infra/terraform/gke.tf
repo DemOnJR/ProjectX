@@ -17,12 +17,15 @@ module "gke" {
   network_policy           = true
   remove_default_node_pool = true
 
-  master_authorized_networks = [
-    {
-      cidr_block   = local.terraform_client_cidr
-      display_name = "terraform-client"
-    }
-  ]
+  master_authorized_networks = concat(
+    [
+      {
+        cidr_block   = local.terraform_client_cidr
+        display_name = "terraform-client"
+      },
+    ],
+    var.extra_gke_master_authorized_networks,
+  )
 
   # Exposes the GKE DNS control-plane endpoint (IAM), so CI (e.g. GitHub Actions) can use
   # get-gke-credentials with use_dns_based_endpoint without listing runner IPs here.

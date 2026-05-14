@@ -158,23 +158,20 @@ cloudflare_argocd_token   = "eyJ..."</code></pre></span></label>
   </div>
 
   <!-- ── 4. GitHub ── -->
-  <h3 style="margin-top:1.5rem">4 — GitHub Actions secrets (Terraform-managed)</h3>
+  <h3 style="margin-top:1.5rem">4 — CI in Vault + GitHub Actions <strong>secrets</strong> (masked)</h3>
   <div class="card">
-    <p style="margin-bottom:.6rem">If <code>github_repo</code> and <code>github_token</code> are set in <code>infra/terraform/terraform.tfvars</code>, <code>infra/terraform/github-ci.tf</code> creates the Actions <strong>secrets</strong> below (masked in public logs). Otherwise add them manually in the repo.</p>
+    <p style="margin-bottom:.6rem">Terraform (<code>infra/terraform/vault-ci.tf</code>) writes CI material to Vault KV at <code>kv/data/ci/projectx</code> when <code>github_repo</code> is set and <code>write_ci_secrets_to_vault</code> is true (requires <code>export VAULT_TOKEN=...</code> during <code>terraform apply</code>). <code>infra/terraform-vault/github-jwt.tf</code> enables JWT auth so GitHub Actions can read that path with OIDC.</p>
+    <p style="margin-bottom:.6rem">In the GitHub repo <strong>Settings → Secrets and variables → Actions → Secrets</strong> (not Variables), create repository secrets so values are <strong>redacted in workflow logs</strong>:</p>
     <table style="margin:.5rem 0 0;width:100%">
-      <thead><tr><th>Name</th><th>Purpose</th></tr></thead>
+      <thead><tr><th>Variable</th><th>Example</th></tr></thead>
       <tbody>
-        <tr><td><code>WIF_PROVIDER</code></td><td>Workload Identity Federation provider resource name</td></tr>
-        <tr><td><code>GCP_SERVICE_ACCOUNT</code></td><td>CI service account email (WIF impersonation)</td></tr>
-        <tr><td><code>GCP_PROJECT_ID</code></td><td>GCP project ID</td></tr>
-        <tr><td><code>REGISTRY</code></td><td>Artifact Registry hostname (e.g. <code>europe-west3-docker.pkg.dev</code>)</td></tr>
-        <tr><td><code>GITOPS_PAT</code></td><td>Classic PAT with <code>repo</code> on the GitOps repo (image tag commits)</td></tr>
-        <tr><td><code>APP_URL</code></td><td>Public app URL for post-deploy health check (e.g. <code>https://projectx.pbcv.dev</code>)</td></tr>
-        <tr><td><code>GCP_CLUSTER_NAME</code></td><td>GKE cluster name (manual load-test workflow + <code>kubectl</code>)</td></tr>
-        <tr><td><code>GCP_REGION</code></td><td>GKE region for <code>get-gke-credentials</code> in load test</td></tr>
+        <tr><td><code>VAULT_ADDR</code></td><td><code>https://vault.pbcv.dev</code></td></tr>
+        <tr><td><code>VAULT_JWT_PATH</code></td><td><code>jwt-github</code> (must match <code>vault_github_jwt_mount_path</code> in terraform-vault)</td></tr>
+        <tr><td><code>VAULT_JWT_ROLE</code></td><td><code>github-ci-projectx</code> (must match <code>vault_github_jwt_role_name</code>)</td></tr>
+        <tr><td><code>VAULT_CI_SECRET_PATH</code></td><td><code>kv/data/ci/projectx</code> (full KV v2 API path)</td></tr>
       </tbody>
     </table>
-    <p style="margin:.75rem 0 0">You still create the PAT yourself; Terraform stores it as <code>GITOPS_PAT</code> (and can mirror it into Vault KV via <code>terraform-vault</code> if configured).</p>
+    <p style="margin:.75rem 0 0"><strong>Public repos:</strong> use <strong>Secrets</strong> for <code>VAULT_*</code> so paths and URLs are not echoed unmasked. The workflow YAML only shows secret <em>names</em> (e.g. <code>VAULT_CI_SECRET_PATH</code>), not values. Avoid <code>echo</code> / job summaries that print runtime env (URLs, PATs). Fork PRs do not receive repository secrets, so untrusted PR workflows cannot authenticate to Vault.</p>
   </div>
 
   <!-- ── 5. values.yaml ── -->
@@ -188,7 +185,7 @@ cloudflare_argocd_token   = "eyJ..."</code></pre></span></label>
   <h3 style="margin-top:1.5rem">6 — Apply Order</h3>
   <div class="card">
     <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span><code>cd infra/terraform &amp;&amp; terraform apply</code> — creates cluster, ArgoCD, VSO, ArgoCD tunnel</span></label>
-    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Copy <code>terraform output ci_wif_provider</code> and <code>ci_service_account</code> → set as GitHub Variables (step 4)</span></label>
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Create GitHub <strong>Actions Secrets</strong> (step 4): <code>VAULT_ADDR</code>, <code>VAULT_JWT_PATH</code>, <code>VAULT_JWT_ROLE</code>, <code>VAULT_CI_SECRET_PATH</code> — workflows use <code>hashicorp/vault-action</code> with GitHub OIDC; secret <strong>values</strong> are masked in logs (public-safe).</span></label>
     <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span><code>cd infra/terraform-vault &amp;&amp; export VAULT_TOKEN=... &amp;&amp; terraform apply</code> — Vault K8s auth + KV secrets (keep tokens in sync with main Terraform; see <a href="#tokens">Tunnel tokens</a>).</span></label>
     <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Enable <code>vault.enabled: true</code> + <code>cloudflareTunnel.enabled: true</code> in <code>values.yaml</code> → push → ArgoCD deploys VSO resources → cloudflared starts</span></label>
     <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Test CI: make a change to <code>app/main.py</code> → push → watch <a href="https://github.com/DemOnJR/ProjectX/actions" target="_blank">GitHub Actions</a> → ArgoCD auto-syncs</span></label>
@@ -217,7 +214,7 @@ cloudflare_argocd_token   = "eyJ..."</code></pre></span></label>
       <div><h3 style="margin:0;color:#326ce5">Kubernetes (K8s)</h3><span class="badge" style="background:rgba(50,108,229,.12);color:#326ce5;border-color:rgba(50,108,229,.3)">Container Orchestration</span></div>
     </div>
     <p><strong>Why it was invented:</strong> Running one container on one machine is easy. Running hundreds of containers across tens of machines — keeping them healthy, restarting crashed ones, distributing traffic, scaling up on load and down to save money — is not. Google ran everything in containers internally for years using a system called Borg. Kubernetes (2014) is the open-source version of those ideas. It is a <em>cluster operating system</em>: you declare what you want ("run 3 replicas of this container") and Kubernetes makes it happen and keeps it that way.</p>
-    <p style="margin:0"><strong>In this project:</strong> Kubernetes runs on GKE and hosts all workloads. It manages the <code>projectx-api</code> Deployment (keeps 2 pods running, health-checks them via <code>/healthz</code>), the HPA (scales from 2 to 10 replicas based on CPU), the ClusterIP Service (internal load balancing), and the cloudflared tunnel pods. It also runs ArgoCD and the Vault Secrets Operator.</p>
+    <p style="margin:0"><strong>In this project:</strong> Kubernetes runs on GKE and hosts all workloads. It manages the <code>projectx-api</code> Deployment (keeps 2 pods running; Helm sets readiness on <code>/ready</code>, liveness on <code>/live</code>; CI still polls <code>/healthz</code>), the HPA (scales from 2 to 10 replicas based on CPU), the ClusterIP Service (internal load balancing), and the cloudflared tunnel pods. It also runs ArgoCD and the Vault Secrets Operator.</p>
   </div>
 
   <!-- ── GKE ── -->
@@ -227,7 +224,7 @@ cloudflare_argocd_token   = "eyJ..."</code></pre></span></label>
       <div><h3 style="margin:0;color:#4285f4">GKE — Google Kubernetes Engine</h3><span class="badge" style="background:rgba(66,133,244,.12);color:#4285f4;border-color:rgba(66,133,244,.3)">Managed Kubernetes</span></div>
     </div>
     <p><strong>Why it was invented:</strong> Running Kubernetes yourself means managing the control plane (the API server, scheduler, etcd database) — upgrades, HA, backups, certificates. That is a full-time job. Managed Kubernetes services (GKE, EKS, AKS) take over the control plane completely. You only manage the worker nodes (and in Autopilot mode, not even those). GKE (2014, Google's own product built on the same team that wrote Kubernetes) is considered the most mature of the managed offerings.</p>
-    <p style="margin:0"><strong>In this project:</strong> GKE hosts the cluster in <code>europe-west3</code> across two zones. Terraform provisions it via the <code>terraform-google-modules/kubernetes-engine</code> module. It handles node upgrades, auto-repair, and auto-scaling transparently. The node pool uses <code>e2-medium</code> spot instances (1 vCPU / 4 GB RAM) and scales from 1 to 4 nodes per zone. Spot instances cost ~85 % less than on-demand; GKE replaces them automatically if Google reclaims them.</p>
+    <p style="margin:0"><strong>In this project:</strong> GKE hosts the cluster in <code>europe-west3</code> across two zones. Terraform provisions it via the <code>terraform-google-modules/kubernetes-engine</code> module. The control plane allows the Terraform runner’s public IP plus any CIDRs in <code>extra_gke_master_authorized_networks</code> (stable VPN/office <code>/32</code>s) so <code>kubectl</code> and Kubernetes-backed Terraform still work if your home IP changes. The node pool uses <code>e2-medium</code> spot instances (1 vCPU / 4 GB RAM) and scales from 1 to 4 nodes per zone. Spot instances cost ~85 % less than on-demand; GKE replaces them automatically if Google reclaims them.</p>
   </div>
 
   <!-- ── Terraform ── -->
@@ -237,7 +234,7 @@ cloudflare_argocd_token   = "eyJ..."</code></pre></span></label>
       <div><h3 style="margin:0;color:#7b42bc">Terraform</h3><span class="badge" style="background:rgba(123,66,188,.12);color:#7b42bc;border-color:rgba(123,66,188,.3)">Infrastructure as Code</span></div>
     </div>
     <p><strong>Why it was invented:</strong> Clicking through cloud consoles to create infrastructure is slow, error-prone, and impossible to reproduce. HashiCorp created Terraform (2014) so infrastructure can be described in code (<code>.tf</code> files), version-controlled in Git, reviewed in pull requests, and applied repeatedly to get the same result every time. It also tracks what it created in a <em>state file</em>, so it knows exactly what to change or delete.</p>
-    <p style="margin:0"><strong>In this project:</strong> <code>infra/terraform/</code> provisions everything in GCP: the VPC, GKE cluster, Artifact Registry, IAM bindings, ArgoCD and VSO Helm releases, Cloudflare tunnel secrets, and the Workload Identity Federation pool for CI. <code>infra/terraform-vault/</code> configures the Kubernetes auth backend in Vault after the cluster exists. One <code>terraform apply</code> creates the entire stack from nothing.</p>
+    <p style="margin:0"><strong>In this project:</strong> <code>infra/terraform/</code> provisions everything in GCP: the VPC, GKE cluster, Artifact Registry, IAM bindings, ArgoCD and VSO Helm releases, Cloudflare tunnel secrets, and the Workload Identity Federation pool for CI. <code>infra/terraform-vault/</code> configures the Kubernetes auth backend in Vault after the cluster exists. One <code>terraform apply</code> creates the entire stack from nothing. State lives in <code>terraform.tfstate</code> (or your configured backend): <code>terraform destroy</code> only removes what is still recorded there — an empty state yields “No changes”. CI credentials for GitHub Actions are written to Vault KV (<code>vault-ci.tf</code>) and read at job time via JWT/OIDC (<code>github-jwt.tf</code>). The <code>hashicorp/kubernetes</code> provider is pinned to 2.x so the GKE module’s legacy <code>kubernetes_config_map</code> for optional ip-masq wiring does not spam deprecation warnings (until upstream switches to <code>kubernetes_config_map_v1</code>).</p>
   </div>
 
   <!-- ── Helm ── -->
@@ -267,7 +264,7 @@ cloudflare_argocd_token   = "eyJ..."</code></pre></span></label>
       <div><h3 style="margin:0;color:#2dba4e">GitHub Actions</h3><span class="badge bg">CI/CD</span></div>
     </div>
     <p><strong>Why it was invented:</strong> Every software team needs Continuous Integration: automatically run tests, build artifacts, and deploy when code changes — no manual steps. GitHub Actions (2019) is GitHub's built-in CI/CD system. Instead of managing a separate Jenkins server or paying for a standalone CI SaaS, workflows live in <code>.github/workflows/</code> right next to the code. Each workflow is triggered by Git events (push, PR, tag) and runs in disposable virtual machines.</p>
-    <p style="margin:0"><strong>In this project:</strong> <code>.github/workflows/ci.yml</code> runs on pushes to <code>main</code> under <code>app/**</code> as four jobs: build (Docker + artifact), push (WIF → Artifact Registry), deploy (<code>yq</code> + GitOps commit via PAT), verify (poll <code>APP_URL/healthz</code>). A second workflow, <code>load-test.yml</code>, is <strong>manual only</strong>: Playwright load + <code>kubectl</code> HPA snapshots. <code>infra/terraform/github-ci.tf</code> can provision the repo's Actions <strong>secrets</strong> (including WIF provider, project ID, registry host) so public logs stay masked.</p>
+    <p style="margin:0"><strong>In this project:</strong> <code>.github/workflows/ci.yml</code> runs on pushes to <code>main</code> under <code>app/**</code> as four jobs: build (Docker + artifact), push (WIF → Artifact Registry), deploy (<code>yq</code> + GitOps commit via PAT from Vault), verify (poll <code>APP_URL/healthz</code>). A second workflow, <code>load-test.yml</code>, is <strong>manual only</strong>: Playwright load + <code>kubectl</code> HPA snapshots. CI reads GCP/Git fields from Vault KV (<code>infra/terraform/vault-ci.tf</code>) using JWT auth (<code>infra/terraform-vault/github-jwt.tf</code>).</p>
   </div>
 
   <!-- ── WIF ── -->
@@ -327,7 +324,7 @@ cloudflare_argocd_token   = "eyJ..."</code></pre></span></label>
       <div><h3 style="margin:0;color:#009688">FastAPI</h3><span class="badge" style="background:rgba(0,150,136,.12);color:#009688;border-color:rgba(0,150,136,.3)">Python Web Framework</span></div>
     </div>
     <p><strong>Why it was invented:</strong> Python web frameworks like Flask are simple and well-known, but they lack type safety, have no built-in async support, and require separate libraries for data validation and documentation. FastAPI (Sebastián Ramírez, 2018) is built on Python type hints and Pydantic: write a function with typed parameters, and you automatically get request validation, serialisation, and an interactive Swagger docs page at <code>/docs</code>. It uses ASGI and <code>async/await</code> natively, making it one of the fastest Python frameworks.</p>
-    <p style="margin:0"><strong>In this project:</strong> The app in <code>app/main.py</code> is a minimal FastAPI service with two endpoints: <code>GET /</code> returns a hello-world JSON message and <code>GET /healthz</code> returns <code>{"status":"ok"}</code>. The <code>/healthz</code> endpoint is used by Kubernetes readiness and liveness probes to know when a pod is ready to receive traffic and when to restart it. The app runs under <code>uvicorn</code> on port 8000 inside the container.</p>
+    <p style="margin:0"><strong>In this project:</strong> The app in <code>app/main.py</code> is a minimal FastAPI service: <code>GET /</code> hello JSON, <code>GET /healthz</code> for CI verify and backwards compatibility, <code>GET /live</code> and <code>GET /ready</code> for Kubernetes liveness and readiness (GitOps Helm chart points probes at <code>/live</code> and <code>/ready</code>). The app runs under <code>uvicorn</code> on port 8000 inside the container.</p>
   </div>
 
   <!-- ── HPA ── -->
@@ -655,7 +652,7 @@ cloudflare_argocd_token   = "eyJ..."</code></pre></span></label>
               <text x="1015" y="110" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">clone ProjectX-ArgoCD</text>
               <text x="1015" y="126" text-anchor="middle" fill="#e6edf3" font-size="9" font-family="sans-serif">yq .image.tag = "a1b2c3d4"</text>
               <text x="1015" y="142" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">git commit + push</text>
-              <text x="1015" y="158" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">via GITOPS_PAT secret</text>
+              <text x="1015" y="158" text-anchor="middle" fill="#8b949e" font-size="9" font-family="sans-serif">via GITOPS_PAT from Vault</text>
               <text x="1015" y="173" text-anchor="middle" fill="#3fb950" font-size="9" font-family="sans-serif">✓ GitOps repo updated</text>
 
               <!-- 6: ArgoCD detects -->
@@ -699,7 +696,7 @@ cloudflare_argocd_token   = "eyJ..."</code></pre></span></label>
               <text x="500" y="306" fill="#e6edf3" font-size="9" font-family="sans-serif">git commit -m "ci: deploy projectx-api a1b2c3d4"</text>
               <text x="500" y="324" fill="#e6edf3" font-size="9" font-family="sans-serif">git push</text>
               <text x="500" y="342" fill="#8b949e" font-size="9" font-family="sans-serif">Only commits if values.yaml actually changed (git diff --staged --quiet)</text>
-              <text x="500" y="360" fill="#8b949e" font-size="9" font-family="sans-serif">GITOPS_PAT = GitHub secret (repo scope PAT)</text>
+              <text x="500" y="360" fill="#8b949e" font-size="9" font-family="sans-serif">GITOPS_PAT from Vault KV (repo scope PAT)</text>
 
               <!-- Detailed box: ArgoCD sync detail -->
               <rect x="950" y="230" width="400" height="145" rx="8" fill="rgba(188,140,255,0.06)" stroke="#30363d" stroke-width="1"/>
@@ -708,7 +705,7 @@ cloudflare_argocd_token   = "eyJ..."</code></pre></span></label>
               <text x="970" y="288" fill="#8b949e" font-size="9" font-family="sans-serif">syncPolicy.automated.selfHeal = true (reverts manual kubectl changes)</text>
               <text x="970" y="306" fill="#8b949e" font-size="9" font-family="sans-serif">Polls every ~3 min  OR  force: kubectl patch application ...</text>
               <text x="970" y="324" fill="#8b949e" font-size="9" font-family="sans-serif">Rolling update: new pods ready first, then old pods terminate</text>
-              <text x="970" y="342" fill="#8b949e" font-size="9" font-family="sans-serif">Health: readinessProbe + livenessProbe → /healthz on port 8000</text>
+              <text x="970" y="342" fill="#8b949e" font-size="9" font-family="sans-serif">Health: readiness /ready  ·  liveness /live  ·  CI /healthz :8000</text>
               <text x="970" y="360" fill="#3fb950" font-size="9" font-family="sans-serif">✓ Zero downtime deployment</text>
 
               <!-- Total time label -->
@@ -1013,7 +1010,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
     <table>
       <thead><tr><th>Job</th><th>What it does</th></tr></thead>
       <tbody>
-        <tr><td><strong>Build</strong></td><td>Checkout · compute short tag (<code>GITHUB_SHA</code> first 8 chars) · <code>docker build</code> · save image tarball as an artifact (tag is the only output passed downstream — full image refs stay in secrets to avoid GitHub redaction stripping job outputs).</td></tr>
+        <tr><td><strong>Build</strong></td><td>Checkout · Vault JWT → env (<code>REGISTRY</code>, <code>GCP_PROJECT_ID</code>) · compute short tag (<code>GITHUB_SHA</code> first 8 chars) · <code>docker build</code> · save image tarball as an artifact (tag is the only output passed downstream).</td></tr>
         <tr><td><strong>Push</strong></td><td>Download artifact · WIF auth to GCP · <code>gcloud auth configure-docker</code> · push <code>${REGISTRY}/${GCP_PROJECT_ID}/projectx/projectx-api:&lt;tag&gt;</code> + <code>:latest</code>.</td></tr>
         <tr><td><strong>Deploy</strong></td><td>Clone GitOps repo with <code>GITOPS_PAT</code> · <code>yq</code> sets <code>image.tag</code> in <code>apps/projectx-api/values.yaml</code> · commit + push. Requires <code>needs: [build, push]</code> so the tag is visible (deploy must list <code>build</code> in <code>needs</code>, not only <code>push</code>).</td></tr>
         <tr><td><strong>Verify</strong></td><td>Wait for Argo CD / rollout · poll <code>${APP_URL}/healthz</code> · write a markdown summary in the Actions run.</td></tr>
@@ -1021,11 +1018,11 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
     </table>
   </div>
 
-  <h3>Secrets (public repo — all sensitive values are Actions secrets)</h3>
-  <p>Prefer Terraform (<code>github-ci.tf</code>) with <code>github_token</code> in <code>infra/terraform/terraform.tfvars</code> so these are created automatically:</p>
+  <h3>Vault KV fields (read into the job as environment variables)</h3>
+  <p>CI reads these from Vault KV via <code>hashicorp/vault-action</code> (JWT / GitHub OIDC). Store <code>VAULT_ADDR</code>, <code>VAULT_JWT_PATH</code>, <code>VAULT_JWT_ROLE</code>, <code>VAULT_CI_SECRET_PATH</code> as repository <strong>Secrets</strong> so values are redacted in public logs.</p>
   <div class="card">
     <table>
-      <thead><tr><th>Secret</th><th>Role</th></tr></thead>
+      <thead><tr><th>Key (in KV)</th><th>Role</th></tr></thead>
       <tbody>
         <tr><td><code>WIF_PROVIDER</code></td><td><code>google-github-actions/auth</code></td></tr>
         <tr><td><code>GCP_SERVICE_ACCOUNT</code></td><td>Impersonated CI service account</td></tr>
@@ -1225,17 +1222,26 @@ kubectl rollout restart deployment/projectx-api-cloudflared -n projectx</code></
         <tr><td>GKE node pool + cluster</td><td>Destroyed by GKE module</td></tr>
         <tr><td>GKE node service account</td><td>Destroyed by GKE module</td></tr>
         <tr><td>WIF pool + CI service account</td><td>Destroyed by ci.tf resources</td></tr>
+        <tr><td><code>GitHub Actions secrets</code></td><td><code>VAULT_*</code> for Vault JWT + KV path (masked in logs; see checklist step 4)</td></tr>
         <tr><td>VPC + subnets</td><td>Destroyed by network module</td></tr>
         <tr><td>GCP project APIs</td><td>Left enabled (disable_on_destroy = false)</td></tr>
       </tbody>
     </table>
   </div>
+  <div class="note" style="margin-top:1rem"><p><strong>“No changes. No objects need to be destroyed.”</strong> — Terraform only destroys what is still in its <strong>state file</strong> (<code>terraform.tfstate</code> or remote backend). If you already ran a successful destroy, or this directory never had an apply, the state list is empty — the message is normal, not an error. Run <code>terraform state list</code> to confirm. To rebuild the stack, use <code>terraform apply</code> again.</p></div>
   <div class="warn"><p>If you enabled GCP Load Balancer Ingress (<code>ingress.enabled: true</code>), disable it and push first so ArgoCD removes the GCP LB before you destroy.</p></div>
   <pre><code># If using Vault, destroy vault config first:
 cd ProjectX/infra/terraform-vault && terraform destroy
 
-# Destroy all GCP infrastructure:
-cd ProjectX/infra/terraform && terraform destroy</code></pre>
+# Destroy all GCP infrastructure (CI secrets live in Vault KV; revoke JWT role separately if needed):
+cd ProjectX/infra/terraform && terraform destroy
+
+# If destroy fails on kubernetes_namespace_v1.projectx with Unauthorized (your IP
+# no longer matches GKE master_authorized_networks), from infra/terraform run once:
+#   terraform state rm 'kubernetes_namespace_v1.projectx'
+# (state only — the namespace is removed when the cluster is deleted.) Prefer fixing
+# access first (e.g. extra_gke_master_authorized_networks in tfvars + terraform apply).
+# Then: terraform destroy -refresh=false</code></pre>
 
   <h3>Nuclear Option — Delete the Entire Project</h3>
   <pre><code>gcloud projects delete YOUR_PROJECT_ID</code></pre>
@@ -1245,6 +1251,9 @@ cd ProjectX/infra/terraform && terraform destroy</code></pre>
 <!-- ══════════════════════════════════════════════════════════ TROUBLESHOOT -->
 <section id="troubleshoot">
   <h2>Troubleshooting</h2>
+
+  <h3>terraform destroy: Unauthorized on <code>kubernetes_namespace_v1.projectx</code></h3>
+  <div class="card"><p>The GKE API only accepts clients whose IP is allowed in <code>master_authorized_networks</code>. If your public IP changed since the last apply, Terraform may not reach the cluster to delete the namespace. Add your current <code>/32</code> via <code>extra_gke_master_authorized_networks</code> and run <code>terraform apply</code>, then destroy again. If you only need to finish teardown from this machine, run <code>terraform state rm 'kubernetes_namespace_v1.projectx'</code> from <code>infra/terraform</code> (removes from state only; deleting the cluster still removes the namespace in GCP), then <code>terraform destroy -refresh=false</code>.</p></div>
 
   <h3>Pods in ErrImagePull / ImagePullBackOff</h3>
   <div class="card"><p><strong>Fix:</strong> Terraform now grants <code>roles/artifactregistry.reader</code> to the GKE node SA automatically. Verify the image URL in <code>values.yaml</code> matches the AR repo exactly.</p>
@@ -1260,7 +1269,7 @@ kubectl create secret generic cloudflared-token \
   <div class="card"><p>The CI service account needs <code>roles/container.developer</code> (or another role that includes <code>container.clusters.getCredentials</code>). Terraform adds this in <code>infra/terraform/ci.tf</code> as <code>google_project_iam_member.ci_gke_developer</code> — run <code>terraform apply</code> on <code>infra/terraform</code> after pulling the latest.</p></div>
 
   <h3>GitHub Actions fails: "google-github-actions/auth"</h3>
-  <div class="card"><p>Ensure the workflow uses <code>secrets.WIF_PROVIDER</code> and <code>secrets.GCP_SERVICE_ACCOUNT</code> (not empty variables). Terraform should create these as <strong>secrets</strong> when <code>github-ci.tf</code> is enabled.</p>
+  <div class="card"><p>Ensure the workflow repo has <strong>Actions secrets</strong> <code>VAULT_ADDR</code>, <code>VAULT_JWT_PATH</code>, <code>VAULT_JWT_ROLE</code>, <code>VAULT_CI_SECRET_PATH</code> (values masked in logs) and that <code>google-github-actions/auth</code> receives non-empty <code>WIF_PROVIDER</code> / <code>GCP_SERVICE_ACCOUNT</code> from Vault (see <code>vault-ci.tf</code> + <code>terraform-vault/github-jwt.tf</code>).</p>
   <pre><code># Values come from Terraform outputs if you set them manually:
 terraform output ci_wif_provider
 terraform output ci_service_account</code></pre></div>
@@ -1280,6 +1289,9 @@ terraform output ci_service_account</code></pre></div>
 kubectl logs -n vault-secrets-operator-system \
   -l app.kubernetes.io/name=vault-secrets-operator | tail -30</code></pre>
   <p>Common causes: terraform-vault not applied · wrong role/SA name · KV v2 not enabled · secret path mismatch.</p></div>
+
+  <h3>terraform destroy: “No changes” / empty state</h3>
+  <div class="card"><p>Nothing is wrong: Terraform has <strong>no resources left in state</strong> (already destroyed, or you never applied here). Run <code>terraform state list</code> — if it prints nothing, run <code>terraform apply</code> to create infrastructure again.</p></div>
 
   <h3>terraform destroy fails on Artifact Registry</h3>
   <div class="card"><p>Images exist from before the cleanup provisioner was added. Delete manually:</p>
