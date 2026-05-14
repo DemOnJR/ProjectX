@@ -95,9 +95,11 @@
   <a href="#deploy">Deploy</a>
   <a href="#docker">Docker Image</a>
   <a href="#ci">CI / Auto-Deploy</a>
+  <a href="#pipeline">Pipeline</a>
   <a href="#argocd">Argo CD</a>
   <a href="#cf">CF Tunnels</a>
   <a href="#vault">Vault</a>
+  <a href="#tokens">Tunnel tokens</a>
   <a href="#destroy">Destroy</a>
   <a href="#troubleshoot">Troubleshoot</a>
 </nav>
@@ -107,12 +109,12 @@
 <!-- ══════════════════════════════════════════════════════════ OVERVIEW -->
 <section id="overview">
   <h1>ProjectX</h1>
-  <p class="tagline">FastAPI on GKE · GitOps with Argo CD · Keyless CI via GitHub Actions · Secrets in HashiCorp Vault</p>
+  <p class="tagline">FastAPI on GKE · GitOps with Argo CD · Multi-job GitHub Actions (WIF, no GCP keys) · Vault KV + VSO · optional Playwright load test</p>
   <div class="card-grid">
-    <div class="card"><div style="font-size:1.4rem;margin-bottom:.4rem">📦</div><h3>ProjectX</h3><p>FastAPI app source + Terraform that provisions all GCP infrastructure, CI identity, and optional Cloudflare tunnels.</p><span class="badge bb">Python</span> <span class="badge bo">Terraform</span></div>
-    <div class="card"><div style="font-size:1.4rem;margin-bottom:.4rem">🔄</div><h3>ProjectX-ArgoCD</h3><p>GitOps repo — Helm chart for the app. Argo CD watches this and syncs every commit automatically.</p><span class="badge bp">Helm</span> <span class="badge bg">GitOps</span></div>
-    <div class="card"><div style="font-size:1.4rem;margin-bottom:.4rem">⚙️</div><h3>GitHub Actions CI</h3><p>Triggered on every push to <code>app/</code>. Builds image, pushes to Artifact Registry, updates image tag — zero manual steps.</p><span class="badge bg">Automated</span></div>
-    <div class="card"><div style="font-size:1.4rem;margin-bottom:.4rem">🔐</div><h3>HashiCorp Vault</h3><p>Stores Cloudflare tunnel tokens. Vault Secrets Operator syncs them into the cluster automatically.</p><span class="badge by">Vault</span></div>
+    <div class="card"><div style="font-size:1.4rem;margin-bottom:.4rem">📦</div><h3>ProjectX</h3><p>FastAPI app, Docker build context, and Terraform for GCP (GKE, Artifact Registry, WIF, Argo CD, tunnel secrets for the cluster).</p><span class="badge bb">Python</span> <span class="badge bo">Terraform</span></div>
+    <div class="card"><div style="font-size:1.4rem;margin-bottom:.4rem">🔄</div><h3>ProjectX-ArgoCD</h3><p>GitOps Helm chart (<code>values.yaml</code>). Argo CD syncs changes; HPA scales the API; optional cloudflared + Vault hooks in values.</p><span class="badge bp">Helm</span> <span class="badge bg">GitOps</span></div>
+    <div class="card"><div style="font-size:1.4rem;margin-bottom:.4rem">⚙️</div><h3>GitHub Actions</h3><p>On push to <code>main</code> under <code>app/**</code>: <strong>Build</strong> → <strong>Push</strong> (Artifact Registry) → <strong>Deploy</strong> (GitOps tag commit) → <strong>Verify</strong> (<code>APP_URL/healthz</code>). A separate workflow runs a manual Playwright load test against autoscaling.</p><span class="badge bg">4 jobs + load test</span></div>
+    <div class="card"><div style="font-size:1.4rem;margin-bottom:.4rem">🔐</div><h3>Vault &amp; CI secrets</h3><p>Terraform can write GitHub Actions <strong>secrets</strong> (masked in logs) and push tunnel tokens into Vault KV for VSO. See <a href="#tokens">Tunnel tokens</a> when rotating.</p><span class="badge by">Vault</span> <span class="badge bb">Terraform → GitHub</span></div>
   </div>
 </section>
 
@@ -130,12 +132,17 @@
   </div>
 
   <!-- ── 2. Cloudflare Tunnels ── -->
-  <h3 style="margin-top:1.5rem">2 — Cloudflare Tunnels</h3>
+  <h3 style="margin-top:1.5rem">2 — Cloudflare Tunnels (GKE vs other servers)</h3>
   <div class="card">
-    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Go to <a href="https://one.dash.cloudflare.com" target="_blank">one.dash.cloudflare.com</a> → Networks → Tunnels → <strong>Create tunnel</strong> (type: Cloudflared)</span></label>
-    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span><strong>Tunnel 1 — ArgoCD:</strong> public hostname <code>argocd.pbcv.dev</code> → service <code>http://argocd-server.argocd.svc.cluster.local:80</code>. Copy token → paste into <code>infra/terraform/terraform.tfvars</code> as <code>argocd_tunnel_token</code></span></label>
-    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span><strong>Tunnel 2 — API:</strong> public hostname <code>projectx.pbcv.dev</code> → service <code>http://projectx-api.projectx.svc.cluster.local:80</code>. Copy token → paste into <code>infra/terraform-vault/terraform.tfvars</code> as <code>cloudflare_projectx_token</code></span></label>
-    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Add DNS CNAME records in Cloudflare for both hostnames (Cloudflare shows you the CNAME target after tunnel creation)</span></label>
+    <div class="danger" style="margin-bottom:.75rem"><p><strong>Important:</strong> Use a <strong>dedicated tunnel</strong> for GKE (or only register GKE connectors on that tunnel). If the same tunnel has connectors on a VPS <em>and</em> on GKE, Cloudflare load-balances across them — requests that hit the VPS cannot resolve <code>*.svc.cluster.local</code> → intermittent <strong>502</strong> for Argo CD and the API.</p></div>
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Go to <a href="https://one.dash.cloudflare.com" target="_blank">one.dash.cloudflare.com</a> → Networks → Tunnels → <strong>Create tunnel</strong> (Cloudflared) for <strong>GKE only</strong>.</span></label>
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span><strong>Public hostnames</strong> on that tunnel (type <code>http</code>, full cluster DNS):<br>
+      <code>argocd.pbcv.dev</code> → <code>http://argocd-server.argocd.svc.cluster.local:80</code><br>
+      <code>projectx.pbcv.dev</code> → <code>http://projectx-api.projectx.svc.cluster.local:80</code><br>
+      Argo CD is run with <code>server.insecure</code> so it serves HTTP behind Cloudflare TLS (avoids redirect loops).</span></label>
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Copy the tunnel token into <code>infra/terraform/terraform.tfvars</code> as <code>argocd_tunnel_token</code> and <code>projectx_tunnel_token</code> (same tunnel is fine for both hostnames on one connector set).</span></label>
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Copy the <strong>same</strong> token values into <code>infra/terraform-vault/terraform.tfvars</code> as <code>cloudflare_argocd_token</code> and <code>cloudflare_projectx_token</code>, then run <code>terraform apply</code> in <code>infra/terraform-vault</code> so Vault UI shows current secrets (see <a href="#tokens">Tunnel tokens</a>).</span></label>
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Add DNS CNAME records in Cloudflare as instructed for the tunnel.</span></label>
   </div>
 
   <!-- ── 3. Vault ── -->
@@ -151,27 +158,30 @@ cloudflare_argocd_token   = "eyJ..."</code></pre></span></label>
   </div>
 
   <!-- ── 4. GitHub ── -->
-  <h3 style="margin-top:1.5rem">4 — GitHub Actions (after terraform apply)</h3>
+  <h3 style="margin-top:1.5rem">4 — GitHub Actions secrets (Terraform-managed)</h3>
   <div class="card">
-    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Create a GitHub PAT at <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens/new</a> → Classic → <strong><code>repo</code> scope</strong> on <code>DemOnJR/ProjectX-ArgoCD</code>. Copy it.</span></label>
-    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>In <a href="https://github.com/DemOnJR/ProjectX/settings/secrets/actions" target="_blank">ProjectX → Settings → Secrets &amp; Variables → Actions</a> add:
-      <table style="margin:.5rem 0 0;width:100%">
-        <thead><tr><th>Type</th><th>Name</th><th>Where to get the value</th></tr></thead>
-        <tbody>
-          <tr><td><span class="badge br" style="background:rgba(248,81,73,.12);color:var(--red);border:1px solid rgba(248,81,73,.3)">Secret</span></td><td><code>GITOPS_PAT</code></td><td>PAT created above</td></tr>
-          <tr><td><span class="badge bb">Variable</span></td><td><code>WIF_PROVIDER</code></td><td><code>terraform output ci_wif_provider</code> (run after apply)</td></tr>
-          <tr><td><span class="badge bb">Variable</span></td><td><code>GCP_SERVICE_ACCOUNT</code></td><td><code>terraform output ci_service_account</code> (run after apply)</td></tr>
-          <tr><td><span class="badge bb">Variable</span></td><td><code>GCP_PROJECT_ID</code></td><td><code>gcp-projectx-496112</code></td></tr>
-        </tbody>
-      </table>
-    </span></label>
+    <p style="margin-bottom:.6rem">If <code>github_repo</code> and <code>github_token</code> are set in <code>infra/terraform/terraform.tfvars</code>, <code>infra/terraform/github-ci.tf</code> creates the Actions <strong>secrets</strong> below (masked in public logs). Otherwise add them manually in the repo.</p>
+    <table style="margin:.5rem 0 0;width:100%">
+      <thead><tr><th>Name</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>WIF_PROVIDER</code></td><td>Workload Identity Federation provider resource name</td></tr>
+        <tr><td><code>GCP_SERVICE_ACCOUNT</code></td><td>CI service account email (WIF impersonation)</td></tr>
+        <tr><td><code>GCP_PROJECT_ID</code></td><td>GCP project ID</td></tr>
+        <tr><td><code>REGISTRY</code></td><td>Artifact Registry hostname (e.g. <code>europe-west3-docker.pkg.dev</code>)</td></tr>
+        <tr><td><code>GITOPS_PAT</code></td><td>Classic PAT with <code>repo</code> on the GitOps repo (image tag commits)</td></tr>
+        <tr><td><code>APP_URL</code></td><td>Public app URL for post-deploy health check (e.g. <code>https://projectx.pbcv.dev</code>)</td></tr>
+        <tr><td><code>GCP_CLUSTER_NAME</code></td><td>GKE cluster name (manual load-test workflow + <code>kubectl</code>)</td></tr>
+        <tr><td><code>GCP_REGION</code></td><td>GKE region for <code>get-gke-credentials</code> in load test</td></tr>
+      </tbody>
+    </table>
+    <p style="margin:.75rem 0 0">You still create the PAT yourself; Terraform stores it as <code>GITOPS_PAT</code> (and can mirror it into Vault KV via <code>terraform-vault</code> if configured).</p>
   </div>
 
   <!-- ── 5. values.yaml ── -->
   <h3 style="margin-top:1.5rem">5 — Enable Cloudflare Tunnel + Vault in values.yaml</h3>
   <div class="card">
-    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>In <code>ProjectX-ArgoCD/apps/projectx-api/values.yaml</code> set <code>cloudflareTunnel.enabled: true</code> and <code>vault.enabled: true</code>, then push to GitHub → ArgoCD syncs automatically.</span></label>
-    <div class="warn" style="margin:.4rem 0 0"><p>Leave <code>projectx_tunnel_token</code> <strong>empty</strong> in <code>infra/terraform/terraform.tfvars</code> when using Vault — otherwise both Terraform and VSO try to own the same K8s secret and conflict.</p></div>
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>In <code>ProjectX-ArgoCD/apps/projectx-api/values.yaml</code> set <code>cloudflareTunnel.enabled: true</code> and <code>vault.enabled: true</code>, then push to GitHub → Argo CD syncs.</span></label>
+    <div class="warn" style="margin:.4rem 0 0"><p>If <code>vault.enabled: true</code>, leave <code>projectx_tunnel_token</code> <strong>empty</strong> in main <code>terraform.tfvars</code> so only Vault/VSO (or a single source) owns the <code>cloudflared-token</code> secret. If Vault is off, set <code>projectx_tunnel_token</code> in main Terraform instead.</p></div>
   </div>
 
   <!-- ── 6. Apply order ── -->
@@ -179,7 +189,7 @@ cloudflare_argocd_token   = "eyJ..."</code></pre></span></label>
   <div class="card">
     <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span><code>cd infra/terraform &amp;&amp; terraform apply</code> — creates cluster, ArgoCD, VSO, ArgoCD tunnel</span></label>
     <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Copy <code>terraform output ci_wif_provider</code> and <code>ci_service_account</code> → set as GitHub Variables (step 4)</span></label>
-    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span><code>cd infra/terraform-vault &amp;&amp; terraform apply</code> — configures Vault auth + writes CF tokens</span></label>
+    <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span><code>cd infra/terraform-vault &amp;&amp; export VAULT_TOKEN=... &amp;&amp; terraform apply</code> — Vault K8s auth + KV secrets (keep tokens in sync with main Terraform; see <a href="#tokens">Tunnel tokens</a>).</span></label>
     <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Enable <code>vault.enabled: true</code> + <code>cloudflareTunnel.enabled: true</code> in <code>values.yaml</code> → push → ArgoCD deploys VSO resources → cloudflared starts</span></label>
     <label style="display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.6rem"><input type="checkbox"><span>Test CI: make a change to <code>app/main.py</code> → push → watch <a href="https://github.com/DemOnJR/ProjectX/actions" target="_blank">GitHub Actions</a> → ArgoCD auto-syncs</span></label>
   </div>
@@ -257,7 +267,7 @@ cloudflare_argocd_token   = "eyJ..."</code></pre></span></label>
       <div><h3 style="margin:0;color:#2dba4e">GitHub Actions</h3><span class="badge bg">CI/CD</span></div>
     </div>
     <p><strong>Why it was invented:</strong> Every software team needs Continuous Integration: automatically run tests, build artifacts, and deploy when code changes — no manual steps. GitHub Actions (2019) is GitHub's built-in CI/CD system. Instead of managing a separate Jenkins server or paying for a standalone CI SaaS, workflows live in <code>.github/workflows/</code> right next to the code. Each workflow is triggered by Git events (push, PR, tag) and runs in disposable virtual machines.</p>
-    <p style="margin:0"><strong>In this project:</strong> <code>.github/workflows/ci.yml</code> triggers on every push to <code>main</code> that touches <code>app/**</code>. It authenticates to GCP via WIF (no stored keys), builds the Docker image, pushes it to Artifact Registry with a short-SHA tag, then clones <code>ProjectX-ArgoCD</code> and commits an updated <code>image.tag</code>. ArgoCD picks up that commit and deploys. Total time: ~3–5 minutes.</p>
+    <p style="margin:0"><strong>In this project:</strong> <code>.github/workflows/ci.yml</code> runs on pushes to <code>main</code> under <code>app/**</code> as four jobs: build (Docker + artifact), push (WIF → Artifact Registry), deploy (<code>yq</code> + GitOps commit via PAT), verify (poll <code>APP_URL/healthz</code>). A second workflow, <code>load-test.yml</code>, is <strong>manual only</strong>: Playwright load + <code>kubectl</code> HPA snapshots. <code>infra/terraform/github-ci.tf</code> can provision the repo's Actions <strong>secrets</strong> (including WIF provider, project ID, registry host) so public logs stay masked.</p>
   </div>
 
   <!-- ── WIF ── -->
@@ -267,7 +277,7 @@ cloudflare_argocd_token   = "eyJ..."</code></pre></span></label>
       <div><h3 style="margin:0;color:#4285f4">Workload Identity Federation (WIF)</h3><span class="badge bb">Keyless Auth</span></div>
     </div>
     <p><strong>Why it was invented:</strong> The classic way to let CI push to a cloud is to download a service account JSON key and store it as a CI secret. Keys are long-lived, can be leaked in logs, and are a pain to rotate. WIF (Google, 2021) lets an external identity — like a GitHub Actions OIDC token — be exchanged for a short-lived GCP token at job runtime. No key file is ever created. The token expires when the job ends.</p>
-    <p style="margin:0"><strong>In this project:</strong> Terraform creates a WIF pool (<code>github-actions</code>) with an attribute condition that only accepts tokens from <code>DemOnJR/ProjectX</code>. GitHub Actions exchanges its OIDC JWT for a GCP token that can impersonate the <code>projectx-ci</code> service account, which has <code>roles/artifactregistry.writer</code>. Nothing is stored as a secret — just three GitHub Actions variables that are not even sensitive.</p>
+    <p style="margin:0"><strong>In this project:</strong> Terraform creates a WIF pool (<code>github-actions</code>) with an attribute condition scoped to your GitHub repo. Actions exchanges its OIDC JWT for a GCP access token and impersonates <code>projectx-ci</code> (<code>roles/artifactregistry.writer</code>, plus cluster credentials for the load-test job). The WIF provider resource name and service account email are stored as GitHub <strong>secrets</strong> so they are redacted in logs on public repositories.</p>
   </div>
 
   <!-- ── Argo CD ── -->
@@ -995,54 +1005,78 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 <!-- ══════════════════════════════════════════════════════════ CI -->
 <section id="ci">
-  <h2>CI — Automated Build &amp; Deploy</h2>
-  <p>After setup, pushing any change to <code>app/</code> on <code>main</code> triggers the full pipeline automatically — no manual steps.</p>
+  <h2>CI — GitHub Actions (automated)</h2>
+  <p>Workflow file: <code>.github/workflows/ci.yml</code>. Trigger: <code>push</code> to <code>main</code> with paths under <code>app/**</code> only (infra-only commits do not run CI).</p>
 
-  <div class="card">
-    <div class="flow">
-      <span class="fi">git push app/</span><span class="fa">→</span>
-      <span class="fi">GitHub Actions</span><span class="fa">→</span>
-      <span class="fi">WIF auth (no keys)</span><span class="fa">→</span>
-      <span class="fi">docker build + push</span><span class="fa">→</span>
-      <span class="fi">update image.tag</span><span class="fa">→</span>
-      <span class="fi">ArgoCD sync</span><span class="fa">→</span>
-      <span class="fi">new version live ✓</span>
-    </div>
-    <p style="margin:0.5rem 0 0">Total time: ~3–5 minutes from push to live.</p>
-  </div>
-
-  <h3>Step 1 — Set github_repo and apply Terraform</h3>
-  <p>Already done if you set <code>github_repo = "YOUR_USERNAME/ProjectX"</code> in <code>terraform.tfvars</code> and ran <code>terraform apply</code>. Terraform created the WIF pool, CI service account, and IAM bindings.</p>
-
-  <h3>Step 2 — Create a GitHub PAT (for GitOps commits)</h3>
-  <p>Go to <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens/new</a> → Classic token → <strong><code>repo</code> scope</strong> → Generate. Copy it.</p>
-
-  <h3>Step 3 — Add GitHub Actions Variables &amp; Secret</h3>
-  <p>In your <strong>ProjectX repo</strong> → Settings → Secrets and variables → Actions:</p>
+  <h3>Four jobs (sequential)</h3>
   <div class="card">
     <table>
-      <thead><tr><th>Type</th><th>Name</th><th>Value</th></tr></thead>
+      <thead><tr><th>Job</th><th>What it does</th></tr></thead>
       <tbody>
-        <tr><td>Variable</td><td><code>WIF_PROVIDER</code></td><td><code>terraform output ci_wif_provider</code></td></tr>
-        <tr><td>Variable</td><td><code>GCP_SERVICE_ACCOUNT</code></td><td><code>terraform output ci_service_account</code></td></tr>
-        <tr><td>Variable</td><td><code>GCP_PROJECT_ID</code></td><td>your GCP project ID</td></tr>
-        <tr><td>Secret</td><td><code>GITOPS_PAT</code></td><td>GitHub PAT from Step 2</td></tr>
+        <tr><td><strong>Build</strong></td><td>Checkout · compute short tag (<code>GITHUB_SHA</code> first 8 chars) · <code>docker build</code> · save image tarball as an artifact (tag is the only output passed downstream — full image refs stay in secrets to avoid GitHub redaction stripping job outputs).</td></tr>
+        <tr><td><strong>Push</strong></td><td>Download artifact · WIF auth to GCP · <code>gcloud auth configure-docker</code> · push <code>${REGISTRY}/${GCP_PROJECT_ID}/projectx/projectx-api:&lt;tag&gt;</code> + <code>:latest</code>.</td></tr>
+        <tr><td><strong>Deploy</strong></td><td>Clone GitOps repo with <code>GITOPS_PAT</code> · <code>yq</code> sets <code>image.tag</code> in <code>apps/projectx-api/values.yaml</code> · commit + push. Requires <code>needs: [build, push]</code> so the tag is visible (deploy must list <code>build</code> in <code>needs</code>, not only <code>push</code>).</td></tr>
+        <tr><td><strong>Verify</strong></td><td>Wait for Argo CD / rollout · poll <code>${APP_URL}/healthz</code> · write a markdown summary in the Actions run.</td></tr>
       </tbody>
     </table>
   </div>
 
-  <h3>Step 4 — Test It</h3>
-  <pre><code># Make any change to app/main.py (e.g. update the hello message)
-git add app/main.py && git commit -m "feat: test CI" && git push origin main
+  <h3>Secrets (public repo — all sensitive values are Actions secrets)</h3>
+  <p>Prefer Terraform (<code>github-ci.tf</code>) with <code>github_token</code> in <code>infra/terraform/terraform.tfvars</code> so these are created automatically:</p>
+  <div class="card">
+    <table>
+      <thead><tr><th>Secret</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td><code>WIF_PROVIDER</code></td><td><code>google-github-actions/auth</code></td></tr>
+        <tr><td><code>GCP_SERVICE_ACCOUNT</code></td><td>Impersonated CI service account</td></tr>
+        <tr><td><code>GCP_PROJECT_ID</code></td><td>Image path + gcloud project</td></tr>
+        <tr><td><code>REGISTRY</code></td><td>Regional Artifact Registry host</td></tr>
+        <tr><td><code>GITOPS_PAT</code></td><td>Push to GitOps repo</td></tr>
+        <tr><td><code>APP_URL</code></td><td>Verify step health check</td></tr>
+        <tr><td><code>GCP_CLUSTER_NAME</code> / <code>GCP_REGION</code></td><td>Used by the manual load-test workflow for <code>kubectl</code> + HPA observation</td></tr>
+      </tbody>
+    </table>
+  </div>
 
-# Watch the workflow:
-# https://github.com/YOUR_USERNAME/ProjectX/actions
+  <h3>Quick test</h3>
+  <pre><code># Change something under app/ (e.g. VERSION in main.py)
+git add app/ && git commit -m "ci: trigger" && git push origin main
+# https://github.com/YOUR_ORG/ProjectX/actions
 
-# Force ArgoCD sync if you don't want to wait ~3 min:
-kubectl patch application projectx-api -n argocd \
-  --type merge -p '{"operation":{"sync":{}}}'
+# Optional: hard refresh Argo CD application
+kubectl annotate application projectx-api -n argocd argocd.argoproj.io/refresh=hard --overwrite</code></pre>
+</section>
 
-kubectl rollout status deployment/projectx-api -n projectx</code></pre>
+<!-- ══════════════════════════════════════════════════════════ PIPELINE -->
+<section id="pipeline">
+  <h2>End-to-end pipeline</h2>
+  <p>From developer commit to traffic hitting the cluster:</p>
+  <div class="card">
+    <div class="flow">
+      <span class="fi">Developer</span><span class="fa">→</span>
+      <span class="fi">git push (app/**)</span><span class="fa">→</span>
+      <span class="fi">GitHub Actions</span><span class="fa">→</span>
+      <span class="fi">Docker build</span><span class="fa">→</span>
+      <span class="fi">Artifact Registry</span><span class="fa">→</span>
+      <span class="fi">GitOps commit (new tag)</span><span class="fa">→</span>
+      <span class="fi">Argo CD sync</span><span class="fa">→</span>
+      <span class="fi">Rolling deploy</span><span class="fa">→</span>
+      <span class="fi">Cloudflare tunnel</span><span class="fa">→</span>
+      <span class="fi">Users</span>
+    </div>
+    <p style="margin-top:.75rem">Parallel path: <strong>Vault</strong> holds tunnel tokens (and optional PAT copy) → <strong>Vault Secrets Operator</strong> materialises <code>cloudflared-token</code> in <code>projectx</code> → cloudflared pods read it. Main Terraform can still create <code>projectx/cloudflared-token</code> when <code>projectx_tunnel_token</code> is set and Vault is disabled for that path.</p>
+  </div>
+
+  <h3>Horizontal Pod Autoscaler (HPA)</h3>
+  <p>GitOps chart enables CPU-based autoscaling (e.g. 2–10 replicas, target CPU %). The API Service maps port 80 → app port 8000.</p>
+
+  <h3>Manual load test (<code>.github/workflows/load-test.yml</code>)</h3>
+  <div class="card">
+    <p><strong>Trigger:</strong> Actions → <em>Load Test — Autoscale</em> → <em>Run workflow</em> (workflow_dispatch).</p>
+    <p><strong>Inputs:</strong> <code>concurrency</code> (parallel Playwright HTTP workers, default 60) · <code>duration</code> (seconds, default 180).</p>
+    <p><strong>Steps:</strong> WIF + GKE credentials → snapshot HPA / replicas → install Playwright → concurrent requests to <code>APP_URL</code> (<code>/</code>, <code>/healthz</code>, <code>/version</code>) → background <code>kubectl get hpa</code> log → snapshot after → summary table (replicas before vs after).</p>
+    <p style="margin:0">Requires <code>GCP_CLUSTER_NAME</code> and <code>GCP_REGION</code> secrets (set by Terraform with the live cluster).</p>
+  </div>
 </section>
 
 <!-- ══════════════════════════════════════════════════════════ ARGOCD -->
@@ -1068,27 +1102,25 @@ kubectl logs -n projectx deployment/projectx-api       # app logs</code></pre>
 <!-- ══════════════════════════════════════════════════════════ CF TUNNELS -->
 <section id="cf">
   <h2>Cloudflare Tunnels</h2>
-  <p>Expose both ArgoCD and the API publicly without GCP Load Balancers or open firewall ports. You create the tunnels in the Cloudflare dashboard and paste the tokens into Terraform.</p>
+  <p>Expose Argo CD and the API over HTTPS at the edge without opening inbound ports on GKE. Cloudflare terminates TLS; origins are plain HTTP inside the cluster.</p>
 
   <div class="card-grid">
-    <div class="card"><span class="badge bp">argocd.pbcv.dev</span><h3>Argo CD tunnel</h3><p>Managed by Terraform — <code>cloudflared</code> Deployment in <code>argocd</code> namespace, points at <code>argocd-server:80</code>.</p></div>
-    <div class="card"><span class="badge bg">projectx.pbcv.dev</span><h3>ProjectX API tunnel</h3><p>Managed by Argo CD via Helm chart when <code>cloudflareTunnel.enabled: true</code>. Token injected by Terraform or Vault.</p></div>
+    <div class="card"><span class="badge bp">argocd.pbcv.dev</span><h3>Argo CD</h3><p><code>cloudflared</code> Deployment in the <code>argocd</code> namespace (Terraform). Origin: <code>http://argocd-server.argocd.svc.cluster.local:80</code> — use the full DNS name in the Cloudflare route.</p></div>
+    <div class="card"><span class="badge bg">projectx.pbcv.dev</span><h3>ProjectX API</h3><p><code>cloudflared</code> from the Helm chart when <code>cloudflareTunnel.enabled: true</code>. Origin: <code>http://projectx-api.projectx.svc.cluster.local:80</code>. Token from Terraform secret and/or Vault → VSO.</p></div>
   </div>
 
+  <div class="danger"><p><strong>Do not share one tunnel across GKE and a VPS.</strong> Every connector on a tunnel receives the same ingress rules. A VPS connector cannot resolve Kubernetes <code>*.svc.cluster.local</code> names → random <strong>502</strong> for GKE hostnames. Keep a tunnel per environment (e.g. one tunnel only for GKE connectors).</p></div>
+
   <div class="steps">
-    <div class="step"><div class="step-body"><p>Go to <a href="https://one.dash.cloudflare.com" target="_blank">one.dash.cloudflare.com</a> → Networks → Tunnels → Create tunnel (Cloudflared).</p></div></div>
-    <div class="step"><div class="step-body"><p>Create <strong>tunnel 1</strong> (ArgoCD): public hostname <code>argocd.pbcv.dev</code> → service <code>http://argocd-server.argocd.svc.cluster.local:80</code>. Copy the token.</p></div></div>
-    <div class="step"><div class="step-body"><p>Create <strong>tunnel 2</strong> (API): public hostname <code>projectx.pbcv.dev</code> → service <code>http://projectx-api.projectx.svc.cluster.local:80</code>. Copy the token.</p></div></div>
-    <div class="step"><div class="step-body"><p>Add tokens to <code>infra/terraform/terraform.tfvars</code> and apply:</p>
-    <pre><code>argocd_tunnel_token   = "eyJ..."
-projectx_tunnel_token = "eyJ..."   # if not using Vault
-terraform apply</code></pre></div></div>
-    <div class="step"><div class="step-body"><p>Enable the tunnel in <code>values.yaml</code> and push (ProjectX API only — ArgoCD is Terraform-managed):</p>
+    <div class="step"><div class="step-body"><p>Create the tunnel in <a href="https://one.dash.cloudflare.com" target="_blank">Zero Trust</a> → Networks → Tunnels.</p></div></div>
+    <div class="step"><div class="step-body"><p>Add public hostnames with protocol <strong>http</strong> and the full <code>.svc.cluster.local</code> service URLs (short <code>.svc</code> names may fail DNS from inside the tunnel pod).</p></div></div>
+    <div class="step"><div class="step-body"><p>Copy the token into <code>infra/terraform/terraform.tfvars</code> (<code>argocd_tunnel_token</code>, <code>projectx_tunnel_token</code>) and apply — see <a href="#tokens">Tunnel tokens</a> for Vault sync and restarts.</p></div></div>
+    <div class="step"><div class="step-body"><p>For the API chart, enable the tunnel in GitOps:</p>
     <pre><code>cloudflareTunnel:
   enabled: true
   hostname: projectx.pbcv.dev</code></pre></div></div>
   </div>
-  <div class="warn"><p>If you use Vault for the ProjectX tunnel token, leave <code>projectx_tunnel_token</code> empty in main <code>terraform.tfvars</code> — Vault/VSO handles injection. See the Vault section.</p></div>
+  <div class="warn"><p>If Vault supplies the ProjectX token, leave <code>projectx_tunnel_token</code> empty in main <code>terraform.tfvars</code> unless you intentionally want Terraform to create the K8s secret instead of VSO.</p></div>
 </section>
 
 <!-- ══════════════════════════════════════════════════════════ VAULT -->
@@ -1136,15 +1168,47 @@ vault:
   kubernetesAuthRole: projectx-api</code></pre>
   <p>Push to GitHub → ArgoCD deploys VaultStaticSecret → VSO creates <code>cloudflared-token</code> → cloudflared starts.</p>
 
-  <h3>Rotating a Secret</h3>
+  <h3>Rotating a secret (UI or CLI)</h3>
+  <p>You can still write a new version manually:</p>
   <pre><code>vault kv put kv/projectx token="eyJ_NEW..."
-# Force immediate VSO sync:
 kubectl annotate vaultstaticsecret projectx-api-cloudflared-token \
-  vault.hashicorp.com/requestReconcile="$(date)" -n projectx --overwrite</code></pre>
+  vault.hashicorp.com/requestReconcile="$(date +%s)" -n projectx --overwrite</code></pre>
+  <p>For tunnel tokens, prefer the full procedure in <a href="#tokens">Tunnel tokens</a> so Terraform, Vault UI, and running pods stay aligned.</p>
 
   <h3>Cleanup Order</h3>
   <pre><code>cd infra/terraform-vault && terraform destroy
 cd ../terraform && terraform destroy</code></pre>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ TUNNEL TOKENS -->
+<section id="tokens">
+  <h2>Rotating Cloudflare tunnel tokens (GKE + Vault)</h2>
+  <p>Updating only <code>infra/terraform/terraform.tfvars</code> updates the Kubernetes secrets used by <code>cloudflared</code>, but the <strong>Vault UI</strong> (<code>kv/projectx</code>, <code>kv/argocd</code>) only changes when you run <strong>terraform-vault</strong> with matching values — otherwise VSO keeps syncing the old token and the UI looks stale.</p>
+
+  <div class="steps">
+    <div class="step"><div class="step-body"><p><strong>1 — Cloudflare</strong> — In Zero Trust, create a new tunnel token (or rotate the existing tunnel) and copy the connector token string.</p></div></div>
+    <div class="step"><div class="step-body"><p><strong>2 — Main cluster Terraform</strong> — Edit <code>infra/terraform/terraform.tfvars</code>: set <code>argocd_tunnel_token</code> and <code>projectx_tunnel_token</code> to the new value(s) (same token is OK if one tunnel serves both hostnames).</p></div></div>
+    <div class="step"><div class="step-body"><p><strong>3 — Apply main Terraform</strong> (updates K8s secrets <code>argocd-cloudflared-token</code> and <code>projectx/cloudflared-token</code>):</p>
+      <pre><code>cd ProjectX/infra/terraform
+terraform apply</code></pre>
+      <p style="margin:.4rem 0 0">Or target only the secrets if you prefer: <code>-target=kubernetes_secret_v1.argocd_cloudflared_token -target=kubernetes_secret_v1.projectx_cloudflared_token</code></p>
+    </div></div>
+    <div class="step"><div class="step-body"><p><strong>4 — Vault Terraform (keeps UI + VSO in sync)</strong> — Edit <code>infra/terraform-vault/terraform.tfvars</code> with the <strong>same</strong> strings:</p>
+      <pre><code>cloudflare_projectx_token = "eyJ...same as projectx_tunnel_token..."
+cloudflare_argocd_token   = "eyJ...same as argocd_tunnel_token..."</code></pre>
+      <pre><code>cd ProjectX/infra/terraform-vault
+export VAULT_TOKEN="hvs...."   # token with permission to write KV + manage auth config
+terraform apply</code></pre>
+      <p style="margin:.4rem 0 0">Confirm in the Vault UI that <code>kv/projectx</code> and <code>kv/argocd</code> show a <strong>new version</strong> with the updated <code>token</code> field.</p>
+    </div></div>
+    <div class="step"><div class="step-body"><p><strong>5 — Restart cloudflared</strong> — Pods do not always reload env from secrets automatically:</p>
+      <pre><code>kubectl rollout restart deployment/argocd-cloudflared -n argocd
+kubectl rollout restart deployment/projectx-api-cloudflared -n projectx</code></pre>
+    </div></div>
+    <div class="step"><div class="step-body"><p><strong>6 — Vault-only path (optional)</strong> — If the app uses VSO for <code>cloudflared-token</code> and you skip step 3 for ProjectX, you can instead <code>vault kv put</code> and annotate <code>VaultStaticSecret</code> to reconcile immediately (see Vault section). Still keep <code>terraform.tfvars</code> files aligned so the next <code>terraform apply</code> does not overwrite Vault with an old token.</p></div></div>
+  </div>
+
+  <div class="tip"><p><strong>Checklist:</strong> Cloudflare public hostname → <code>http</code> → full <code>*.svc.cluster.local:80</code> · Argo CD Helm uses <code>server.insecure</code> so the origin is HTTP · one tunnel should not mix GKE and non-GKE connectors (see <a href="#cf">CF Tunnels</a>).</p></div>
 </section>
 
 <!-- ══════════════════════════════════════════════════════════ DESTROY -->
@@ -1192,13 +1256,20 @@ cd ProjectX/infra/terraform && terraform destroy</code></pre>
 kubectl create secret generic cloudflared-token \
   --from-literal=token=YOUR_TOKEN -n projectx</code></pre></div>
 
-  <h3>GitHub Actions fails: "google-github-actions/auth: failed"</h3>
-  <div class="card"><p>WIF variables not set or wrong. Verify:</p>
-  <pre><code># In GitHub repo → Settings → Variables:
-WIF_PROVIDER      = projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/...
-GCP_SERVICE_ACCOUNT = projectx-ci@YOUR_PROJECT_ID.iam.gserviceaccount.com
-GCP_PROJECT_ID    = YOUR_PROJECT_ID</code></pre>
-  <p>Get correct values: <code>cd infra/terraform && terraform output ci_wif_provider</code></p></div>
+  <h3>GitHub Actions fails: "google-github-actions/auth"</h3>
+  <div class="card"><p>Ensure the workflow uses <code>secrets.WIF_PROVIDER</code> and <code>secrets.GCP_SERVICE_ACCOUNT</code> (not empty variables). Terraform should create these as <strong>secrets</strong> when <code>github-ci.tf</code> is enabled.</p>
+  <pre><code># Values come from Terraform outputs if you set them manually:
+terraform output ci_wif_provider
+terraform output ci_service_account</code></pre></div>
+
+  <h3>Argo CD UI: ERR_TOO_MANY_REDIRECTS</h3>
+  <div class="card"><p>Cloudflare sends HTTP to the pod while Argo CD defaults to redirecting HTTP→HTTPS internally → loop. Fix: Argo CD Helm value <code>configs.params["server.insecure"] = true</code> (already in <code>infra/terraform/argocd.tf</code>) and route hostname to <code>http://...:80</code>.</p></div>
+
+  <h3>Cloudflare 502 on argocd / projectx (intermittent)</h3>
+  <div class="card"><p>Multiple tunnel connectors on different networks (e.g. VPS + GKE) sharing one tunnel — see <a href="#cf">CF Tunnels</a>. Remove stray connectors or split tunnels.</p></div>
+
+  <h3>Pod: InvalidImageName (empty tag)</h3>
+  <div class="card"><p>GitOps <code>image.tag</code> became empty — usually the Deploy job used <code>needs.build.outputs.tag</code> without listing <code>build</code> in <code>needs</code>. Fix is in <code>.github/workflows/ci.yml</code> (<code>needs: [build, push]</code> for deploy).</p></div>
 
   <h3>VSO secret not created</h3>
   <div class="card">
