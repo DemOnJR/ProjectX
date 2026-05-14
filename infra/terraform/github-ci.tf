@@ -71,3 +71,19 @@ resource "github_actions_secret" "gitops_pat" {
   secret_name     = "GITOPS_PAT"
   plaintext_value = var.github_gitops_pat
 }
+
+resource "github_actions_secret" "gcp_cluster_name" {
+  count = local.github_ci_enabled ? 1 : 0
+
+  repository      = local.github_ci_repo
+  secret_name     = "GCP_CLUSTER_NAME"
+  plaintext_value = module.gke.name
+}
+
+resource "github_actions_secret" "gcp_region" {
+  count = local.github_ci_enabled ? 1 : 0
+
+  repository      = local.github_ci_repo
+  secret_name     = "GCP_REGION"
+  plaintext_value = var.gcp_region
+}

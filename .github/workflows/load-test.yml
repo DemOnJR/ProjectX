@@ -1,0 +1,144 @@
+name: Load Test — Autoscale
+
+on:
+  workflow_dispatch:
+    inputs:
+      concurrency:
+        description: "Parallel Playwright workers (requests in flight)"
+        required: false
+        default: "60"
+      duration:
+        description: "Test duration in seconds"
+        required: false
+        default: "180"
+
+permissions:
+  contents: read
+  id-token: write   # WIF keyless auth to GCP
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────────
+  # LOAD TEST
+  #   1. Snapshot HPA state before the run.
+  #   2. Fire concurrent HTTP requests via Playwright for the chosen duration.
+  #   3. Poll HPA / pods every 30 s while the load runs (background watcher).
+  #   4. Snapshot HPA state after the run.
+  #   5. Write a summary card with scaling evidence.
+  # ────────────────────────────────────────────────────────────────────────────
+  load-test:
+    name: "🔥 Load Test & Scale Watch"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "📥 Checkout"
+        uses: actions/checkout@v4
+
+      # ── GCP auth ──────────────────────────────────────────────────────────
+      - name: "🔑 Authenticate to Google Cloud"
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: "☸️  Get GKE credentials"
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ secrets.GCP_CLUSTER_NAME }}
+          location:     ${{ secrets.GCP_REGION }}
+          project_id:   ${{ secrets.GCP_PROJECT_ID }}
+
+      # ── Before snapshot ───────────────────────────────────────────────────
+      - name: "📸 HPA snapshot — BEFORE"
+        id: before
+        run: |
+          echo "### HPA before load test" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          kubectl get hpa projectx-api -n projectx \
+            -o custom-columns="NAME:.metadata.name,MIN:.spec.minReplicas,MAX:.spec.maxReplicas,CURRENT:.status.currentReplicas,DESIRED:.status.desiredReplicas,CPU:.status.currentMetricsBindings[0].current.averageUtilization" \
+            | tee -a "$GITHUB_STEP_SUMMARY" || \
+          kubectl get hpa projectx-api -n projectx | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          REPLICAS_BEFORE=$(kubectl get deployment projectx-api -n projectx \
+            -o jsonpath='{.status.readyReplicas}')
+          echo "replicas_before=${REPLICAS_BEFORE}" >> "$GITHUB_OUTPUT"
+          echo "  Replicas before: ${REPLICAS_BEFORE}"
+
+      # ── Python + Playwright ───────────────────────────────────────────────
+      - name: "🐍 Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tests/load/requirements.txt
+
+      - name: "📦 Install Playwright"
+        run: |
+          pip install -r tests/load/requirements.txt
+          playwright install chromium --with-deps
+
+      # ── Background HPA watcher ────────────────────────────────────────────
+      - name: "👁️  Start HPA watcher (background)"
+        run: |
+          (
+            echo "### HPA scaling log" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            for i in $(seq 1 8); do
+              TS=$(date -u +"%H:%M:%S")
+              LINE=$(kubectl get hpa projectx-api -n projectx \
+                --no-headers 2>/dev/null || echo "n/a")
+              PODS=$(kubectl get pods -n projectx \
+                --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)
+              echo "${TS}  ${LINE}  pods_running=${PODS}" | tee -a "$GITHUB_STEP_SUMMARY"
+              sleep 30
+            done
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          ) &
+          echo "WATCHER_PID=$!" >> "$GITHUB_ENV"
+
+      # ── Playwright load test ──────────────────────────────────────────────
+      - name: "🔥 Run load test"
+        env:
+          APP_URL:     ${{ secrets.APP_URL }}
+          CONCURRENCY: ${{ inputs.concurrency }}
+          DURATION:    ${{ inputs.duration }}
+        run: python tests/load/test_autoscale.py
+
+      # ── After snapshot ────────────────────────────────────────────────────
+      - name: "📸 HPA snapshot — AFTER"
+        if: always()
+        id: after
+        run: |
+          # wait for the background watcher to finish
+          wait "${WATCHER_PID}" 2>/dev/null || true
+
+          echo "### HPA after load test" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          kubectl get hpa projectx-api -n projectx | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          REPLICAS_AFTER=$(kubectl get deployment projectx-api -n projectx \
+            -o jsonpath='{.status.readyReplicas}')
+          echo "replicas_after=${REPLICAS_AFTER}" >> "$GITHUB_OUTPUT"
+          echo "  Replicas after: ${REPLICAS_AFTER}"
+
+      # ── Summary card ──────────────────────────────────────────────────────
+      - name: "📋 Write summary"
+        if: always()
+        env:
+          BEFORE: ${{ steps.before.outputs.replicas_before }}
+          AFTER:  ${{ steps.after.outputs.replicas_after }}
+        run: |
+          SCALED=$([[ "${AFTER}" -gt "${BEFORE}" ]] && echo "✅ Yes (+$((AFTER - BEFORE)) replica(s))" || echo "➡️  No (stayed at ${AFTER})")
+          {
+            echo "## 🔥 Load Test Results"
+            echo ""
+            echo "| | |"
+            echo "|:---|:---|"
+            echo "| **Workers**        | ${{ inputs.concurrency }} parallel Playwright contexts |"
+            echo "| **Duration**       | ${{ inputs.duration }}s |"
+            echo "| **Replicas before**| \`${BEFORE}\` |"
+            echo "| **Replicas after** | \`${AFTER}\` |"
+            echo "| **Auto-scaled?**   | ${SCALED} |"
+            echo "| **App URL**        | ${{ secrets.APP_URL }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
