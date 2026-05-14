@@ -23,6 +23,14 @@ resource "helm_release" "argocd" {
           type = "ClusterIP"
         }
       }
+      configs = {
+        params = {
+          # Cloudflare terminates TLS externally — ArgoCD must serve plain HTTP
+          # internally or it will loop: Cloudflare HTTPS → ArgoCD redirects to
+          # HTTPS → Cloudflare HTTPS → ... → ERR_TOO_MANY_REDIRECTS
+          "server.insecure" = true
+        }
+      }
     })
   ]
 }

@@ -31,12 +31,15 @@ jobs:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
+      # Use the DNS-based control plane endpoint so kubectl works from GitHub-hosted
+      # runners (IAM auth). The default IP endpoint is blocked by master_authorized_networks.
       - name: "☸️  Get GKE credentials"
         uses: google-github-actions/get-gke-credentials@v2
         with:
           cluster_name: ${{ secrets.GCP_CLUSTER_NAME }}
-          location:     ${{ secrets.GCP_REGION }}
-          project_id:   ${{ secrets.GCP_PROJECT_ID }}
+          location: ${{ secrets.GCP_REGION }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          use_dns_based_endpoint: true
 
       - name: "📸 HPA snapshot — BEFORE"
         id: before

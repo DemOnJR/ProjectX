@@ -24,6 +24,10 @@ module "gke" {
     }
   ]
 
+  # Exposes the GKE DNS control-plane endpoint (IAM), so CI (e.g. GitHub Actions) can use
+  # get-gke-credentials with use_dns_based_endpoint without listing runner IPs here.
+  dns_allow_external_traffic = true
+
   node_pools = [
     {
       name               = var.node_pool_name

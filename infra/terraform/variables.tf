@@ -142,7 +142,13 @@ variable "github_repo" {
 }
 
 variable "github_token" {
-  description = "GitHub Personal Access Token (classic, repo scope) for the repository owner. Used by Terraform to set Actions variables and secrets on github_repo. Leave empty to skip."
+  description = <<-EOT
+    GitHub token used by Terraform to create Actions secrets on github_repo.
+    Classic PAT: repo scope. Fine-grained: access to github_repo with "Secrets" read and write.
+    401 errors on plan/apply mean the token is expired, revoked, or lacks those permissions — create a new PAT and update this value.
+    Until the token is fixed, you can run terraform plan/apply with -refresh=false to change GCP resources without the provider calling the GitHub API (use sparingly; refresh drift is possible).
+    Leave empty to skip creating github_actions_secret resources (github_repo must still be set for WIF in ci.tf).
+  EOT
   type        = string
   sensitive   = true
   default     = ""
