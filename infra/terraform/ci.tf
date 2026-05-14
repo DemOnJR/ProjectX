@@ -35,13 +35,22 @@ resource "google_service_account" "ci" {
   count        = var.github_repo != "" ? 1 : 0
   account_id   = "projectx-ci"
   display_name = "ProjectX CI"
-  description  = "Used by GitHub Actions to push Docker images to Artifact Registry"
+  description  = "GitHub Actions: Artifact Registry push + GKE credentials (load-test kubectl)"
 }
 
 resource "google_project_iam_member" "ci_ar_writer" {
   count   = var.github_repo != "" ? 1 : 0
   project = var.gcp_project_id
   role    = "roles/artifactregistry.writer"
+  member  = "serviceAccount:${google_service_account.ci[0].email}"
+}
+
+# Required for google-github-actions/get-gke-credentials (container.clusters.getCredentials)
+# and kubectl in the manual load-test workflow. Scoped to this GCP project only.
+resource "google_project_iam_member" "ci_gke_developer" {
+  count   = var.github_repo != "" ? 1 : 0
+  project = var.gcp_project_id
+  role    = "roles/container.developer"
   member  = "serviceAccount:${google_service_account.ci[0].email}"
 }
 
