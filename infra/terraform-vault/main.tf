@@ -1,13 +1,15 @@
 # Reads the live GKE cluster to extract its API endpoint and CA certificate.
+# After the cluster is deleted, set skip_live_gke_cluster_lookup = true so refresh/destroy does not call Google.
 data "google_container_cluster" "gke" {
+  count = var.skip_live_gke_cluster_lookup ? 0 : 1
+
   name     = var.cluster_name
   location = var.gcp_region
   project  = var.gcp_project_id
 }
 
 locals {
-  k8s_host    = "https://${data.google_container_cluster.gke.endpoint}"
-  k8s_ca_cert = base64decode(data.google_container_cluster.gke.master_auth[0].cluster_ca_certificate)
+  k8s_host = var.skip_live_gke_cluster_lookup ? "https://127.0.0.1" : "https://${data.google_container_cluster.gke[0].endpoint}"
 }
 
 # ── Vault: Kubernetes auth backend ────────────────────────────────────────────
@@ -20,7 +22,7 @@ resource "vault_auth_backend" "kubernetes" {
 resource "vault_kubernetes_auth_backend_config" "gke" {
   backend            = vault_auth_backend.kubernetes.path
   kubernetes_host    = local.k8s_host
-  kubernetes_ca_cert = local.k8s_ca_cert
+  kubernetes_ca_cert = var.skip_live_gke_cluster_lookup ? null : base64decode(data.google_container_cluster.gke[0].master_auth[0].cluster_ca_certificate)
 }
 
 # ── Vault: policy + role for the ProjectX app ─────────────────────────────────

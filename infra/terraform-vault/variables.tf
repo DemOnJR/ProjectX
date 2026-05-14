@@ -15,6 +15,12 @@ variable "cluster_name" {
   default     = "projectx-gke"
 }
 
+variable "skip_live_gke_cluster_lookup" {
+  description = "When true, Terraform does not call data.google_container_cluster (use after the cluster is deleted but Vault resources still exist in state). Required for terraform destroy/plan when the cluster no longer exists. Uses a placeholder kubernetes_host and omits CA cert for the Vault Kubernetes auth config resource so refresh can succeed."
+  type        = bool
+  default     = false
+}
+
 variable "vault_address" {
   description = "Vault server URL."
   type        = string

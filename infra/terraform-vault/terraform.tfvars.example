@@ -6,6 +6,10 @@ gcp_project_id = "YOUR_PROJECT_ID"
 gcp_region   = "europe-west3"
 cluster_name = "projectx-gke"
 
+# Set true when the GKE cluster is already gone but you need terraform destroy/plan here
+# (otherwise data.google_container_cluster fails refresh).
+# skip_live_gke_cluster_lookup = true
+
 # ── Vault server ───────────────────────────────────────────────────────────────
 vault_address = "https://vault.pbcv.dev"
 
