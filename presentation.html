@@ -277,7 +277,7 @@ cloudflare_argocd_token   = "eyJ..."</code></pre></span></label>
       <div><h3 style="margin:0;color:#4285f4">Workload Identity Federation (WIF)</h3><span class="badge bb">Keyless Auth</span></div>
     </div>
     <p><strong>Why it was invented:</strong> The classic way to let CI push to a cloud is to download a service account JSON key and store it as a CI secret. Keys are long-lived, can be leaked in logs, and are a pain to rotate. WIF (Google, 2021) lets an external identity — like a GitHub Actions OIDC token — be exchanged for a short-lived GCP token at job runtime. No key file is ever created. The token expires when the job ends.</p>
-    <p style="margin:0"><strong>In this project:</strong> Terraform creates a WIF pool (<code>github-actions</code>) with an attribute condition scoped to your GitHub repo. Actions exchanges its OIDC JWT for a GCP access token and impersonates <code>projectx-ci</code> (<code>roles/artifactregistry.writer</code>, plus cluster credentials for the load-test job). The WIF provider resource name and service account email are stored as GitHub <strong>secrets</strong> so they are redacted in logs on public repositories.</p>
+    <p style="margin:0"><strong>In this project:</strong> Terraform creates a WIF pool (<code>github-actions</code>) with an attribute condition scoped to your GitHub repo. Actions exchanges its OIDC JWT for a GCP access token and impersonates <code>projectx-ci</code>, which has <code>roles/artifactregistry.writer</code> (image push) and <code>roles/container.developer</code> (so <code>get-gke-credentials</code> + <code>kubectl</code> work in the manual load-test workflow). The WIF provider resource name and service account email are stored as GitHub <strong>secrets</strong> so they are redacted in logs on public repositories.</p>
   </div>
 
   <!-- ── Argo CD ── -->
@@ -1255,6 +1255,9 @@ cd ProjectX/infra/terraform && terraform destroy</code></pre>
   <pre><code># Quick manual fix:
 kubectl create secret generic cloudflared-token \
   --from-literal=token=YOUR_TOKEN -n projectx</code></pre></div>
+
+  <h3>Load test: "Get GKE credentials" fails</h3>
+  <div class="card"><p>The CI service account needs <code>roles/container.developer</code> (or another role that includes <code>container.clusters.getCredentials</code>). Terraform adds this in <code>infra/terraform/ci.tf</code> as <code>google_project_iam_member.ci_gke_developer</code> — run <code>terraform apply</code> on <code>infra/terraform</code> after pulling the latest.</p></div>
 
   <h3>GitHub Actions fails: "google-github-actions/auth"</h3>
   <div class="card"><p>Ensure the workflow uses <code>secrets.WIF_PROVIDER</code> and <code>secrets.GCP_SERVICE_ACCOUNT</code> (not empty variables). Terraform should create these as <strong>secrets</strong> when <code>github-ci.tf</code> is enabled.</p>
